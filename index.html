@@ -219,8 +219,23 @@
         }
 
         @media (max-width: 768px) {
+            header {
+                padding: 0.5vh 8px;
+            }
+            h1 {
+                font-size: 1.3em;
+            }
+            .year-select {
+                font-size: 0.8em;
+                padding: 3px 20px 3px 8px;
+                right: 8px;
+            }
             .calendar-grid {
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+                min-width: 0; /* 手机上不再强制560px,避免每周后两天被截断 */
+                grid-template-columns: repeat(5, 1fr);
+            }
+            .day-card {
+                min-width: 0;
             }
             .date-info {
                 font-size: 9px;
@@ -591,6 +606,13 @@
         // 将布局调整逻辑抽取为独立函数
         function adjustLayout() {
             const container = document.querySelector('.calendar-grid');
+
+            // 手机端交给 CSS 固定5列,不再用 JS 计算
+            if (window.innerWidth <= 768) {
+                container.style.gridTemplateColumns = '';
+                return;
+            }
+
             const containerWidth = container.offsetWidth;
             const containerHeight = container.offsetHeight;
             
