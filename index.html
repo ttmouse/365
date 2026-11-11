@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>365</title>
+    <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.7/lunar.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        :root {
+            --accent-color: #ff2c53;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #fff;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100vh;
+            margin-bottom: 40px;
+            overflow-y: auto; /* 添加垂直滚动 */
+        }
+
+        header {
+            text-align: center;
+            padding: 0.5vh;
+            background: white;
+            z-index: 100;
+            position: sticky;
+            top: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-actions {
+            position: absolute;
+            left: 1vh;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 12px;
+        }
+
+        .header-actions button {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.2s, all 0.3s;
+        }
+
+        .header-actions button:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+
+        .header-actions button:active {
+            transform: translateY(0);
+        }
+
+        .header-actions svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #333;
+            margin: 0;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s, all 0.3s;
+            line-height: 1.2;
+        }
+
+        h1:hover {
+            background: rgba(0,0,0,0.03);
+            transform: translateY(-1px);
+        }
+
+        h1:hover::after {
+            content: '点击编辑';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .title-input {
+            font: inherit;
+            border: none;
+            padding: 4px 8px;
+            width: 300px;
+            text-align: center;
+            border-radius: 4px;
+            background: #f8f8f8;
+            color: #333;
+            outline: none;
+            margin: 0;
+            line-height: 1.2;
+            transition: all 0.3s;
+        }
+
+        .title-input:focus {
+            background: white;
+            box-shadow: 0 0 0 2px rgba(255, 44, 83, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .accent {
+            color: var(--accent-color);
+        }
+
+        .year-select {
+            position: absolute;
+            right: 1vh;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9em;
+            padding: 4px 24px 4px 12px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 3px;
+            background: white;
+            color: #666;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 12px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .year-select:hover {
+            border-color: rgba(0,0,0,0.2);
+            background-color: #fafafa;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0;
+            flex: 1;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            min-width: 560px; /* 确保最小宽度能容纳7个80px的卡片 */
+            border-top: 1px solid #f0f0f0;
+            border-left: 1px solid #f0f0f0;
+        }
+
+        .day-card {
+            aspect-ratio: 1;
+            min-width: 80px;
+            min-height: 80px;
+            border-right: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            background: white;
+            transition: all 0.2s ease;
+            font-size: 0.8em;
+            padding: 2px;
+        }
+
+        .date-info {
+            text-align: center;
+            padding: 0;
+            color: #666;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 1200px) {
+            .calendar-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+            .date-info {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+            .date-info {
+                font-size: 9px;
+            }
+        }
+
+        .lunar-date, .week-day {
+            display: inline;
+            color: #888;
+        }
+
+        .lunar-date::after {
+            content: ' ';
+            margin: 0 2px;
+        }
+
+        .today .date-info,
+        .today .lunar-date,
+        .today .week-day {
+            color: white !important;
+        }
+
+        .today {
+            background: var(--accent-color);
+        }
+
+        .month-start {
+            background-color: #fafafa;
+        }
+
+        .today {
+            background-color: var(--accent-color) !important;
+            border: none;
+            color: white;
+            box-shadow: 0 2px 8px rgba(255, 160, 122, 0.3);
+        }
+
+        .day-number {
+            font-size: 1.8em;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .today .day-number,
+        .today .date-info {
+            color: white;
+        }
+
+        .today.has-memo::after {
+            background: white;
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+        }
+
+        .weekend {
+            background-color: #f8f8f8;
+        }
+
+        .month-number {
+            color: #8c3b90;
+            font-size: 2.2em;
+            font-weight: bold;
+        }
+
+        /* 添加备忘标记样式 */
+        .has-memo::after {
+            content: '';
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 6px;
+            height: 6px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255, 160, 122, 0.4);
+        }
+
+        /* 备忘录浮层样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            display: none;
+            transition: all 0.3s;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -45%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .memo-date {
+            font-size: 20px;
+            color: #444;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .memo-date::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 2px;
+            background: var(--accent-color);
+            opacity: 0.3;
+        }
+
+        .memo-textarea {
+            width: 100%;
+            height: 200px;
+            padding: 20px;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
+            resize: none;
+            transition: all 0.3s;
+            margin-bottom: 24px;
+            font-family: inherit;
+            background: #fcfcfc;
+        }
+
+        .memo-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(255, 44, 83, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .memo-textarea::placeholder {
+            color: #999;
+        }
+
+        .memo-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .memo-button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .memo-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.4s;
+            pointer-events: none;
+        }
+
+        .memo-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .memo-button:hover::after {
+            transform: translate(-50%, -50%) scale(2);
+        }
+
+        .memo-button:active {
+            transform: translateY(0);
+        }
+
+        .save-button {
+            background: var(--accent-color);
+            color: white;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .save-button:hover {
+            background: #ff1745;
+            box-shadow: 0 4px 12px rgba(255, 44, 83, 0.2);
+        }
+
+        .delete-button {
+            background: #f8f8f8;
+            color: #666;
+        }
+
+        .delete-button:hover {
+            background: #ff4757;
+            color: white;
+        }
+
+        .cancel-button {
+            background: #f8f8f8;
+            color: #666;
+        }
+
+        .cancel-button:hover {
+            background: #eee;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 16px 0;
+            background: transparent;
+            position: relative;
+        }
+
+        .color-picker::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -20px;
+            right: -20px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.05), transparent);
+        }
+
+        .color-picker::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -20px;
+            right: -20px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.05), transparent);
+        }
+
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+            transform-origin: center;
+        }
+
+        .color-option:hover {
+            transform: scale(1.15);
+        }
+
+        .color-option.selected {
+            border-color: #333;
+            transform: scale(1.1);
+        }
+
+        .color-option.selected::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        /* 莫兰迪色板 */
+        .color-1 { background-color: #e8d0cd; }  /* 柔粉 */
+        .color-2 { background-color: #d4b8b5; }  /* 暖灰粉 */
+        .color-3 { background-color: #c9bab7; }  /* 灰褐 */
+        .color-4 { background-color: #b5c4b1; }  /* 薄荷绿 */
+        .color-5 { background-color: #a5b5c1; }  /* 淡蓝灰 */
+        .color-6 { background-color: #d1c2d3; }  /* 淡紫 */
+        .color-7 { background-color: #e6d2c0; }  /* 奶茶色 */
+        .color-8 { background-color: #d3d4cc; }  /* 浅灰绿 */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-actions">
+                <button onclick="app.exportMemos()" title="导出备份">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+                <button onclick="document.getElementById('importFile').click()" title="导入备份">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </button>
+                <input type="file" id="importFile" style="display: none" accept=".json" onchange="app.importMemos(event)">
+            </div>
+            <h1 onclick="app.editTitle()"><span id="titleText">THREE<span class="accent">·</span>SIXTY<span class="accent">·</span>FIVE</span></h1>
+            <select id="yearSelect" class="year-select"></select>
+        </header>
+        <div class="calendar-grid" id="calendarContainer"></div>
+    </div>
+
+    <!-- 添加备忘录浮层 -->
+    <div class="modal" id="memoModal">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <div class="modal-content">
+            <div class="memo-date" id="memoDate"></div>
+            <div class="color-picker">
+                <div class="color-option color-1" data-color="#e8d0cd"></div>
+                <div class="color-option color-2" data-color="#d4b8b5"></div>
+                <div class="color-option color-3" data-color="#c9bab7"></div>
+                <div class="color-option color-4" data-color="#b5c4b1"></div>
+                <div class="color-option color-5" data-color="#a5b5c1"></div>
+                <div class="color-option color-6" data-color="#d1c2d3"></div>
+                <div class="color-option color-7" data-color="#e6d2c0"></div>
+                <div class="color-option color-8" data-color="#d3d4cc"></div>
+            </div>
+            <textarea class="memo-textarea" id="memoText" placeholder="写下这一天..."></textarea>
+            <div class="memo-buttons">
+                <button class="memo-button delete-button" id="deleteButton">删除</button>
+                <button class="memo-button cancel-button" id="cancelButton">取消</button>
+                <button class="memo-button save-button" id="saveButton">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 将布局调整逻辑抽取为独立函数
+        function adjustLayout() {
+            const container = document.querySelector('.calendar-grid');
+            const containerWidth = container.offsetWidth;
+            const containerHeight = container.offsetHeight;
+            
+            // 计算理想的格子大小（考虑需要显示365/366天）
+            const totalDays = 366; // 使用366以适应闰年
+            const idealColumns = Math.ceil(Math.sqrt(totalDays * containerWidth / containerHeight));
+            const minWidth = Math.floor(containerWidth / idealColumns) - 1; // 减1以处理边框
+            
+            // 更新grid布局
+            container.style.gridTemplateColumns = `repeat(auto-fill, minmax(${minWidth}px, 1fr))`;
+        }
+
+        const app = {
+            init: function() {
+                this.yearSelect = document.getElementById('yearSelect');
+                this.calendarContainer = document.getElementById('calendarContainer');
+                this.modalBackdrop = document.getElementById('modalBackdrop');
+                this.memoModal = document.getElementById('memoModal');
+                this.memoText = document.getElementById('memoText');
+                this.memoDate = document.getElementById('memoDate');
+                this.currentDate = null;
+                this.memos = JSON.parse(localStorage.getItem('memos') || '{}');
+                this.colors = JSON.parse(localStorage.getItem('dayColors') || '{}');
+                this.title = localStorage.getItem('calendarTitle') || 'THREE·SIXTY·FIVE';
+                
+                this.initYearSelect();
+                this.generateCalendar(new Date().getFullYear());
+                this.bindEvents();
+                this.updateTitleDisplay();
+                
+                // 初始化时调用一次布局调整
+                adjustLayout();
+            },
+
+            initYearSelect: function() {
+                const currentYear = new Date().getFullYear();
+                for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    if (year === currentYear) {
+                        option.selected = true;
+                    }
+                    this.yearSelect.appendChild(option);
+                }
+            },
+
+            updateCalendar: function() {
+                const container = document.querySelector('.calendar-grid');
+                container.innerHTML = '';
+                
+                const year = parseInt(document.querySelector('.year-select').value);
+                const totalDays = this.isLeapYear(year) ? 366 : 365;
+                
+                for (let day = 1; day <= totalDays; day++) {
+                    const date = new Date(year, 0, day);
+                    if (date.getFullYear() !== year) break;
+                    
+                    const dayCard = document.createElement('div');
+                    dayCard.className = 'day-card';
+                    
+                    // 检查是否是今天
+                    const today = new Date();
+                    const isToday = date.toDateString() === today.toDateString();
+                    if (isToday) dayCard.classList.add('today');
+                    
+                    // 获取农历和星期
+                    const lunarDay = this.toLunarDate(date);
+                    const weekDay = this.getWeekDay(date);
+                    
+                    // 更新日期显示格式
+                    dayCard.innerHTML = `
+                        <div class="date-info">
+                            <span class="lunar-date">${lunarDay}</span>
+                            <span class="week-day">${weekDay}</span>
+                        </div>
+                    `;
+                    
+                    // 检查是否有备忘录
+                    const dateStr = this.formatDate(date);
+                    if (this.memos[dateStr]) {
+                        dayCard.classList.add('has-memo');
+                    }
+                    
+                    dayCard.addEventListener('click', () => {
+                        this.openMemoModal(date);
+                    });
+                    
+                    container.appendChild(dayCard);
+                }
+                
+                this.updateDayColors();
+                
+                // 更新完日历后调用布局调整
+                adjustLayout();
+            },
+
+            generateCalendar: function(year) {
+                console.log('Generating calendar for year:', year);
+                this.calendarContainer.innerHTML = '';
+                const today = new Date();
+                
+                for (let month = 0; month < 12; month++) {
+                    for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
+                        const date = new Date(year, month, day);
+                        const dayCard = this.createDayCard(date, today);
+                        this.calendarContainer.appendChild(dayCard);
+                    }
+                }
+            },
+
+            createDayCard: function(date, today) {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                
+                const dateKey = this.getDateKey(date);
+                const hasMemo = this.memos[dateKey];
+                const color = this.colors[dateKey];
+                
+                if (color) {
+                    dayCard.style.backgroundColor = color;
+                    dayCard.classList.add('has-color');
+                }
+                
+                if (this.isToday(date, today)) {
+                    dayCard.classList.add('today');
+                }
+                
+                if (hasMemo) {
+                    dayCard.classList.add('has-memo');
+                }
+                
+                if (date.getDate() === 1) {
+                    dayCard.classList.add('month-start');
+                }
+                
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    dayCard.classList.add('weekend');
+                }
+
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                if (date.getDate() === 1) {
+                    dayNumber.textContent = this.getMonthShort(date.getMonth());
+                    dayNumber.classList.add('month-number');
+                } else {
+                    dayNumber.textContent = date.getDate();
+                }
+
+                const dateInfo = document.createElement('div');
+                dateInfo.className = 'date-info';
+                const lunarDay = this.toLunarDate(date);
+                const weekDay = this.getWeekDay(date);
+                dateInfo.innerHTML = `
+                    <span class="lunar-date">${lunarDay}</span>
+                    <span class="week-day">${weekDay}</span>
+                `;
+
+                dayCard.appendChild(dayNumber);
+                dayCard.appendChild(dateInfo);
+
+                // 点击事件处理
+                dayCard.addEventListener('click', () => {
+                    this.openMemoModal(date);
+                });
+
+                return dayCard;
+            },
+
+            getDaysInMonth: function(year, month) {
+                return new Date(year, month + 1, 0).getDate();
+            },
+
+            isToday: function(date, today) {
+                return date.getFullYear() === today.getFullYear() &&
+                       date.getMonth() === today.getMonth() &&
+                       date.getDate() === today.getDate();
+            },
+
+            getWeekdayName: function(day) {
+                const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+                return weekdays[day];
+            },
+
+            getMonthShort: function(month) {
+                const months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+                return months[month];
+            },
+
+            getDateKey: function(date) {
+                return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+            },
+
+            toLunarDate: function(date) {
+                try {
+                    // 使用lunar-javascript库转换日期
+                    const lunar = Lunar.fromDate(date);
+                    
+                    // 如果是初一，显示月份
+                    if (lunar.getDay() === 1) {
+                        return lunar.getMonthInChinese() + '月';
+                    }
+                    
+                    // 否则显示日期
+                    return lunar.getDayInChinese();
+                } catch (e) {
+                    console.error('农历转换错误:', e);
+                    return '';
+                }
+            },
+
+            getWeekDay: function(date) {
+                const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+                return weekDays[date.getDay()];
+            },
+
+            openMemoModal: function(date) {
+                this.currentDate = date;
+                const dateKey = this.getDateKey(date);
+                
+                // 获取农历和星期
+                const lunarDay = this.toLunarDate(date);
+                const weekDay = this.getWeekDay(date);
+                
+                // 更新模态框日期显示
+                const memoDateEl = document.querySelector('.memo-date');
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                memoDateEl.innerHTML = `${month}月${day}日 ${lunarDay} 星期${weekDay}`;
+                
+                // 更新备忘录内容
+                const memoContent = this.memos[dateKey] || '';
+                document.querySelector('.memo-textarea').value = memoContent;
+                
+                // 更新颜色选择
+                const currentColor = this.colors[dateKey];
+                const colorOptions = document.querySelectorAll('.color-option');
+                colorOptions.forEach(option => {
+                    option.classList.remove('selected');
+                    if (option.dataset.color === currentColor) {
+                        option.classList.add('selected');
+                    }
+                });
+                
+                // 显示模态框
+                document.querySelector('.modal-backdrop').style.display = 'block';
+                document.querySelector('.modal').style.display = 'block';
+                document.querySelector('.memo-textarea').focus();
+            },
+
+            saveMemo: function() {
+                const dateKey = this.getDateKey(this.currentDate);
+                const memoText = this.memoText.value.trim();
+                
+                if (memoText) {
+                    this.memos[dateKey] = memoText;
+                } else {
+                    delete this.memos[dateKey];
+                }
+                
+                localStorage.setItem('memos', JSON.stringify(this.memos));
+                this.generateCalendar(this.currentDate.getFullYear());
+                this.closeMemoModal();
+            },
+
+            closeMemoModal: function() {
+                this.modalBackdrop.style.display = 'none';
+                this.memoModal.style.display = 'none';
+                this.currentDate = null;
+                this.memoText.value = '';
+            },
+
+            selectColor: function(color) {
+                const dateKey = this.getDateKey(this.currentDate);
+                
+                if (color) {
+                    this.colors[dateKey] = color;
+                } else {
+                    delete this.colors[dateKey];
+                }
+                
+                localStorage.setItem('dayColors', JSON.stringify(this.colors));
+                this.generateCalendar(this.currentDate.getFullYear());
+                
+                // 更新颜色选择器UI
+                const colorOptions = document.querySelectorAll('.color-option');
+                colorOptions.forEach(option => {
+                    option.classList.toggle('selected', option.dataset.color === color);
+                });
+            },
+
+            bindEvents: function() {
+                // 年份选择事件
+                this.yearSelect.addEventListener('change', (e) => {
+                    this.updateCalendar();
+                });
+
+                // 颜色选择事件
+                document.querySelectorAll('.color-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        const wasSelected = option.classList.contains('selected');
+                        const color = wasSelected ? null : option.dataset.color;
+                        this.selectColor(color);
+                    });
+                });
+
+                // 备忘录相关事件
+                document.getElementById('saveButton').addEventListener('click', () => {
+                    this.saveMemo();
+                });
+                document.getElementById('cancelButton').addEventListener('click', () => {
+                    this.closeMemoModal();
+                });
+                document.getElementById('deleteButton').addEventListener('click', () => {
+                    this.deleteMemo();
+                });
+                this.modalBackdrop.addEventListener('click', (e) => {
+                    if (e.target === this.modalBackdrop) {
+                        this.closeMemoModal();
+                    }
+                });
+            },
+
+            updateTitleDisplay: function() {
+                const titleText = document.getElementById('titleText');
+                titleText.innerHTML = this.title.replace(/·/g, '<span class="accent">·</span>');
+            },
+
+            editTitle: function() {
+                const h1 = document.querySelector('h1');
+                const titleText = document.getElementById('titleText');
+                const currentTitle = this.title;
+                
+                // 创建输入框
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentTitle;
+                input.className = 'title-input';
+                
+                // 获取当前标题的尺寸
+                const { width } = titleText.getBoundingClientRect();
+                input.style.width = `${width}px`;
+                
+                // 替换标题为输入框
+                h1.replaceChild(input, titleText);
+                input.focus();
+                
+                // 处理失焦和回车事件
+                const saveTitle = () => {
+                    const newTitle = input.value.trim() || 'THREE·SIXTY·FIVE';
+                    this.title = newTitle;
+                    localStorage.setItem('calendarTitle', newTitle);
+                    
+                    // 恢复标题显示
+                    const newTitleText = document.createElement('span');
+                    newTitleText.id = 'titleText';
+                    h1.replaceChild(newTitleText, input);
+                    this.updateTitleDisplay();
+                };
+                
+                input.addEventListener('blur', saveTitle);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        input.blur();
+                    }
+                });
+            },
+
+            exportMemos: function() {
+                const data = {
+                    memos: JSON.parse(localStorage.getItem('memos') || '{}'),
+                    colors: JSON.parse(localStorage.getItem('dayColors') || '{}'),
+                    title: localStorage.getItem('calendarTitle') || 'THREE·SIXTY·FIVE'
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `calendar-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+
+            importMemos: function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (typeof data === 'object') {
+                            // 导入备忘录
+                            if (data.memos) {
+                                this.memos = data.memos;
+                                localStorage.setItem('memos', JSON.stringify(data.memos));
+                            }
+                            // 导入颜色
+                            if (data.colors) {
+                                this.colors = data.colors;
+                                localStorage.setItem('dayColors', JSON.stringify(data.colors));
+                            }
+                            // 导入标题
+                            if (data.title) {
+                                this.title = data.title;
+                                localStorage.setItem('calendarTitle', data.title);
+                                this.updateTitleDisplay();
+                            }
+                            
+                            this.generateCalendar(new Date().getFullYear());
+                            alert('备份导入成功');
+                        } else {
+                            alert('无效的备份文件格式');
+                        }
+                    } catch (error) {
+                        alert('导入失败：无效的文件格式');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            },
+        };
+
+        // 当 DOM 加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Initializing Calendar App');
+            app.init();
+        });
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', adjustLayout);
+    </script>
+</body>
+</html>
