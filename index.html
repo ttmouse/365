@@ -170,6 +170,11 @@
             background-color: #fafafa;
         }
 
+        /* 语言下拉限宽,长语言名(如 Português)不把居中标题挤走 */
+        .lang-select {
+            max-width: 96px;
+        }
+
         .calendar-grid {
             flex: 1;
             min-height: 0;
@@ -213,16 +218,28 @@
         @media (max-width: 768px) {
             header {
                 padding: calc(0.5vh + env(safe-area-inset-top, 0px)) 8px 0.5vh;
+                /* 手机改两行:标题独占一行,图标与控件合并成第二行。加语言下拉后单行放不下,
+                   375px 视口会压住标题(zh 标题 154px/控件约 180px,单行需 ≥528px) */
+                flex-wrap: wrap;
+                row-gap: 4px;
             }
             h1 {
                 font-size: 1.1em;
+                width: 100%;
+                order: 1;
             }
             .header-actions {
+                position: static;
+                transform: none;
                 gap: 8px;
+                order: 3; /* 与 .header-right 同排 */
+                margin-left: 12px;
             }
             .header-right {
-                right: 8px;
+                position: static;
+                transform: none;
                 gap: 6px;
+                order: 2;
             }
             .today-button {
                 font-size: 0.8em;
@@ -375,6 +392,11 @@
             color: #8c3b90;
             font-size: 2.2em;
             font-weight: bold;
+        }
+
+        /* sept/févr. 这类 3 字符以上的月短名塞不进手机格子,降一档字号 */
+        .month-number.long-label {
+            font-size: 1.2em;
         }
 
         /* 添加备忘标记样式 */
@@ -634,24 +656,24 @@
     <div class="container">
         <header>
             <div class="header-actions">
-                <button onclick="app.exportMemos()" title="导出备份">
+                <button onclick="app.exportMemos()" title="导出备份" data-i18n-title="exportBackup">
                     <svg viewBox="0 0 24 24">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
                 </button>
-                <button onclick="document.getElementById('importFile').click()" title="导入备份">
+                <button onclick="document.getElementById('importFile').click()" title="导入备份" data-i18n-title="importBackup">
                     <svg viewBox="0 0 24 24">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </button>
-                <button onclick="document.getElementById('icsFile').click()" title="导入本地日历 (.ics)" aria-label="导入本地日历">
+                <button onclick="document.getElementById('icsFile').click()" title="导入本地日历 (.ics)" aria-label="导入本地日历" data-i18n-title="importIcsTitle" data-i18n-aria="importIcsAria">
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 </button>
-                <button id="systemCalendarButton" onclick="app.syncSystemCalendar()" title="同步 Mac 日历" aria-label="同步 Mac 日历" style="display:none">
+                <button id="systemCalendarButton" onclick="app.syncSystemCalendar()" title="同步 Mac 日历" aria-label="同步 Mac 日历" style="display:none" data-i18n-title="syncMac" data-i18n-aria="syncMac">
                     <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 2 5.3"></path><polyline points="20 4 20 11 13 11"></polyline></svg>
                 </button>
                 <input type="file" id="importFile" style="display: none" accept=".json" onchange="app.importMemos(event)">
@@ -659,7 +681,8 @@
             </div>
             <h1 id="headerInfo"></h1>
             <div class="header-right">
-                <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天">今天</button>
+                <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
+                <select id="langSelect" class="year-select lang-select" title="切换语言" aria-label="切换语言" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
                 <select id="yearSelect" class="year-select"></select>
             </div>
         </header>
@@ -669,7 +692,7 @@
     <!-- 拖拽框选的已选天数提示 -->
     <div class="selection-chip" id="selectionChip">
         <span id="selectionInfo"></span>
-        <button class="selection-chip-clear" id="selectionClear" title="清除选择" aria-label="清除选择">✕</button>
+        <button class="selection-chip-clear" id="selectionClear" title="清除选择" aria-label="清除选择" data-i18n-title="clearSelection" data-i18n-aria="clearSelection">✕</button>
     </div>
 
     <!-- 添加备忘录浮层 -->
@@ -688,11 +711,11 @@
                 <div class="color-option color-7" data-color="#e6d2c0"></div>
                 <div class="color-option color-8" data-color="#d3d4cc"></div>
             </div>
-            <textarea class="memo-textarea" id="memoText" placeholder="写下这一天..."></textarea>
+            <textarea class="memo-textarea" id="memoText" placeholder="写下这一天..." data-i18n-placeholder="memoPlaceholder"></textarea>
             <div class="memo-buttons">
-                <button class="memo-button delete-button" id="deleteButton">删除</button>
-                <button class="memo-button cancel-button" id="cancelButton">取消</button>
-                <button class="memo-button save-button" id="saveButton" title="⌘+Enter 快捷保存">保存</button>
+                <button class="memo-button delete-button" id="deleteButton" data-i18n="delete">删除</button>
+                <button class="memo-button cancel-button" id="cancelButton" data-i18n="cancel">取消</button>
+                <button class="memo-button save-button" id="saveButton" title="⌘+Enter 快捷保存" data-i18n="save" data-i18n-title="saveShortcut">保存</button>
             </div>
         </div>
     </div>
@@ -754,6 +777,355 @@
         const LONG_PRESS_MS = 260; // 触摸长按时长,超过即进入框选
         const EDGE_SCROLL_PX = 48; // 指针进入滚动区边缘此带宽内时自动滚动
 
+        const I18N = {
+            locales: {
+                'zh-CN': {
+                    name: '简体中文',
+                    lunar: true,
+                    dict: {
+                        exportBackup: '导出备份',
+                        importBackup: '导入备份',
+                        importIcsTitle: '导入本地日历 (.ics)',
+                        importIcsAria: '导入本地日历',
+                        syncMac: '同步 Mac 日历',
+                        todayTitle: '回到今天',
+                        today: '今天',
+                        clearSelection: '清除选择',
+                        memoPlaceholder: '写下这一天...',
+                        delete: '删除',
+                        cancel: '取消',
+                        save: '保存',
+                        saveShortcut: '⌘+Enter 快捷保存',
+                        headerToday: '第 <span class="accent">{n}</span> 天 <span class="accent">·</span> 剩 {m} 天',
+                        headerTotal: '共 {total} 天',
+                        untitled: '（无标题）',
+                        icsImported: '已导入 {n} 个日历事件；再次导入会替换当前事件。',
+                        icsFailed: '导入失败：无法读取此 .ics 文件',
+                        macSynced: '已从 Mac 日历同步 {n} 个事件。',
+                        macSyncFailed: '无法同步 Mac 日历：{msg}',
+                        selectionInfo: '已选 <span class="accent">{n}</span> 天 · {from} 至 {to}',
+                        backupImported: '备份导入成功',
+                        backupInvalid: '无效的备份文件格式',
+                        importFailed: '导入失败：无效的文件格式',
+                        langTitle: '切换语言'
+                    }
+                },
+                'zh-TW': {
+                    name: '繁體中文',
+                    lunar: true,
+                    dict: {
+                        exportBackup: '匯出備份',
+                        importBackup: '匯入備份',
+                        importIcsTitle: '匯入本機行事曆 (.ics)',
+                        importIcsAria: '匯入本機行事曆',
+                        syncMac: '同步 Mac 行事曆',
+                        todayTitle: '回到今天',
+                        today: '今天',
+                        clearSelection: '清除選取',
+                        memoPlaceholder: '寫下這一天...',
+                        delete: '刪除',
+                        cancel: '取消',
+                        save: '儲存',
+                        saveShortcut: '⌘+Enter 快捷儲存',
+                        headerToday: '第 <span class="accent">{n}</span> 天 <span class="accent">·</span> 剩 {m} 天',
+                        headerTotal: '共 {total} 天',
+                        untitled: '（無標題）',
+                        icsImported: '已匯入 {n} 個行事曆事件；再次匯入會取代目前事件。',
+                        icsFailed: '匯入失敗：無法讀取此 .ics 檔案',
+                        macSynced: '已從 Mac 行事曆同步 {n} 個事件。',
+                        macSyncFailed: '無法同步 Mac 行事曆：{msg}',
+                        selectionInfo: '已選 <span class="accent">{n}</span> 天 · {from} 至 {to}',
+                        backupImported: '備份匯入成功',
+                        backupInvalid: '無效的備份檔案格式',
+                        importFailed: '匯入失敗：無效的檔案格式',
+                        langTitle: '切換語言'
+                    }
+                },
+                'en': {
+                    name: 'English',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Export backup',
+                        importBackup: 'Import backup',
+                        importIcsTitle: 'Import local calendar (.ics)',
+                        importIcsAria: 'Import local calendar',
+                        syncMac: 'Sync Mac calendar',
+                        todayTitle: 'Back to today',
+                        today: 'Today',
+                        clearSelection: 'Clear selection',
+                        memoPlaceholder: 'Write about this day...',
+                        delete: 'Delete',
+                        cancel: 'Cancel',
+                        save: 'Save',
+                        saveShortcut: '⌘+Enter to save',
+                        headerToday: 'Day <span class="accent">{n}</span> <span class="accent">·</span> {m} days left',
+                        headerTotal: '{total} days',
+                        untitled: '(untitled)',
+                        icsImported: 'Imported {n} calendar events; importing again will replace the current events.',
+                        icsFailed: 'Import failed: unable to read this .ics file',
+                        macSynced: 'Synced {n} events from Mac calendar.',
+                        macSyncFailed: 'Cannot sync Mac calendar: {msg}',
+                        selectionInfo: 'Selected <span class="accent">{n}</span> days · {from} to {to}',
+                        backupImported: 'Backup imported',
+                        backupInvalid: 'Invalid backup file format',
+                        importFailed: 'Import failed: invalid file format',
+                        langTitle: 'Change language'
+                    }
+                },
+                'es': {
+                    name: 'Español',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Exportar copia de seguridad',
+                        importBackup: 'Importar copia de seguridad',
+                        importIcsTitle: 'Importar calendario local (.ics)',
+                        importIcsAria: 'Importar calendario local',
+                        syncMac: 'Sincronizar calendario de Mac',
+                        todayTitle: 'Volver a hoy',
+                        today: 'Hoy',
+                        clearSelection: 'Borrar selección',
+                        memoPlaceholder: 'Escribe sobre este día...',
+                        delete: 'Eliminar',
+                        cancel: 'Cancelar',
+                        save: 'Guardar',
+                        saveShortcut: '⌘+Enter para guardar',
+                        headerToday: 'Día <span class="accent">{n}</span> <span class="accent">·</span> quedan {m} días',
+                        headerTotal: '{total} días',
+                        untitled: '(sin título)',
+                        icsImported: 'Se importaron {n} eventos; importar de nuevo reemplazará los eventos actuales.',
+                        icsFailed: 'Error al importar: no se pudo leer este archivo .ics',
+                        macSynced: 'Se sincronizaron {n} eventos del calendario de Mac.',
+                        macSyncFailed: 'No se pudo sincronizar el calendario de Mac: {msg}',
+                        selectionInfo: '<span class="accent">{n}</span> días seleccionados · {from} a {to}',
+                        backupImported: 'Copia de seguridad importada',
+                        backupInvalid: 'Formato de copia de seguridad no válido',
+                        importFailed: 'Error al importar: formato de archivo no válido',
+                        langTitle: 'Cambiar idioma'
+                    }
+                },
+                'pt': {
+                    name: 'Português',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Exportar backup',
+                        importBackup: 'Importar backup',
+                        importIcsTitle: 'Importar calendário local (.ics)',
+                        importIcsAria: 'Importar calendário local',
+                        syncMac: 'Sincronizar calendário do Mac',
+                        todayTitle: 'Voltar para hoje',
+                        today: 'Hoje',
+                        clearSelection: 'Limpar seleção',
+                        memoPlaceholder: 'Escreva sobre este dia...',
+                        delete: 'Excluir',
+                        cancel: 'Cancelar',
+                        save: 'Salvar',
+                        saveShortcut: '⌘+Enter para salvar',
+                        headerToday: 'Dia <span class="accent">{n}</span> <span class="accent">·</span> faltam {m} dias',
+                        headerTotal: '{total} dias',
+                        untitled: '(sem título)',
+                        icsImported: '{n} eventos importados; importar novamente substituirá os eventos atuais.',
+                        icsFailed: 'Falha na importação: não foi possível ler este arquivo .ics',
+                        macSynced: '{n} eventos sincronizados do calendário do Mac.',
+                        macSyncFailed: 'Não foi possível sincronizar o calendário do Mac: {msg}',
+                        selectionInfo: '<span class="accent">{n}</span> dias selecionados · {from} a {to}',
+                        backupImported: 'Backup importado com sucesso',
+                        backupInvalid: 'Formato de arquivo de backup inválido',
+                        importFailed: 'Falha na importação: formato de arquivo inválido',
+                        langTitle: 'Mudar idioma'
+                    }
+                },
+                'fr': {
+                    name: 'Français',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Exporter la sauvegarde',
+                        importBackup: 'Importer la sauvegarde',
+                        importIcsTitle: 'Importer un calendrier local (.ics)',
+                        importIcsAria: 'Importer un calendrier local',
+                        syncMac: 'Synchroniser le calendrier Mac',
+                        todayTitle: "Revenir à aujourd'hui",
+                        today: "Aujourd'hui",
+                        clearSelection: 'Effacer la sélection',
+                        memoPlaceholder: 'Écrivez à propos de cette journée...',
+                        delete: 'Supprimer',
+                        cancel: 'Annuler',
+                        save: 'Enregistrer',
+                        saveShortcut: '⌘+Entrée pour enregistrer',
+                        headerToday: 'Jour <span class="accent">{n}</span> <span class="accent">·</span> {m} jours restants',
+                        headerTotal: '{total} jours',
+                        untitled: '(sans titre)',
+                        icsImported: '{n} événements importés ; un nouvel import remplacera les événements actuels.',
+                        icsFailed: "Échec de l'import : impossible de lire ce fichier .ics",
+                        macSynced: '{n} événements synchronisés depuis le calendrier Mac.',
+                        macSyncFailed: 'Impossible de synchroniser le calendrier Mac : {msg}',
+                        selectionInfo: '<span class="accent">{n}</span> jours sélectionnés · du {from} au {to}',
+                        backupImported: 'Sauvegarde importée',
+                        backupInvalid: 'Format de fichier de sauvegarde invalide',
+                        importFailed: "Échec de l'import : format de fichier invalide",
+                        langTitle: 'Changer de langue'
+                    }
+                },
+                'de': {
+                    name: 'Deutsch',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Backup exportieren',
+                        importBackup: 'Backup importieren',
+                        importIcsTitle: 'Lokalen Kalender importieren (.ics)',
+                        importIcsAria: 'Lokalen Kalender importieren',
+                        syncMac: 'Mac-Kalender synchronisieren',
+                        todayTitle: 'Zurück zu heute',
+                        today: 'Heute',
+                        clearSelection: 'Auswahl aufheben',
+                        memoPlaceholder: 'Schreibe über diesen Tag...',
+                        delete: 'Löschen',
+                        cancel: 'Abbrechen',
+                        save: 'Speichern',
+                        saveShortcut: '⌘+Enter zum Speichern',
+                        headerToday: 'Tag <span class="accent">{n}</span> <span class="accent">·</span> noch {m} Tage',
+                        headerTotal: '{total} Tage',
+                        untitled: '(ohne Titel)',
+                        icsImported: '{n} Kalendereinträge importiert; erneutes Importieren ersetzt die aktuellen Einträge.',
+                        icsFailed: 'Import fehlgeschlagen: Diese .ics-Datei kann nicht gelesen werden',
+                        macSynced: '{n} Einträge aus dem Mac-Kalender synchronisiert.',
+                        macSyncFailed: 'Mac-Kalender konnte nicht synchronisiert werden: {msg}',
+                        selectionInfo: '<span class="accent">{n}</span> Tage ausgewählt · {from} bis {to}',
+                        backupImported: 'Backup erfolgreich importiert',
+                        backupInvalid: 'Ungültiges Backup-Dateiformat',
+                        importFailed: 'Import fehlgeschlagen: ungültiges Dateiformat',
+                        langTitle: 'Sprache wechseln'
+                    }
+                },
+                'ja': {
+                    name: '日本語',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'バックアップを書き出す',
+                        importBackup: 'バックアップを読み込む',
+                        importIcsTitle: 'ローカルカレンダーを読み込む (.ics)',
+                        importIcsAria: 'ローカルカレンダーを読み込む',
+                        syncMac: 'Mac カレンダーと同期',
+                        todayTitle: '今日に戻る',
+                        today: '今日',
+                        clearSelection: '選択を解除',
+                        memoPlaceholder: 'この日のメモ...',
+                        delete: '削除',
+                        cancel: 'キャンセル',
+                        save: '保存',
+                        saveShortcut: '⌘+Enter で保存',
+                        headerToday: '<span class="accent">{n}</span> 日目 <span class="accent">·</span> 残り {m} 日',
+                        headerTotal: '全 {total} 日',
+                        untitled: '(無題)',
+                        icsImported: '{n} 件のカレンダー予定を読み込みました。再度読み込むと現在の予定は置き換えられます。',
+                        icsFailed: '読み込み失敗：この .ics ファイルを読み取れません',
+                        macSynced: 'Mac カレンダーから {n} 件の予定を同期しました。',
+                        macSyncFailed: 'Mac カレンダーを同期できません：{msg}',
+                        selectionInfo: '<span class="accent">{n}</span> 日間選択中 · {from} 〜 {to}',
+                        backupImported: 'バックアップを読み込みました',
+                        backupInvalid: 'バックアップファイルの形式が無効です',
+                        importFailed: '読み込み失敗：無効なファイル形式です',
+                        langTitle: '言語を変更'
+                    }
+                },
+                'ko': {
+                    name: '한국어',
+                    lunar: false,
+                    dict: {
+                        exportBackup: '백업 내보내기',
+                        importBackup: '백업 가져오기',
+                        importIcsTitle: '로컬 캘린더 가져오기 (.ics)',
+                        importIcsAria: '로컬 캘린더 가져오기',
+                        syncMac: 'Mac 캘린더 동기화',
+                        todayTitle: '오늘로 돌아가기',
+                        today: '오늘',
+                        clearSelection: '선택 해제',
+                        memoPlaceholder: '이 날의 메모...',
+                        delete: '삭제',
+                        cancel: '취소',
+                        save: '저장',
+                        saveShortcut: '⌘+Enter로 저장',
+                        headerToday: '<span class="accent">{n}</span>일째 <span class="accent">·</span> {m}일 남음',
+                        headerTotal: '총 {total}일',
+                        untitled: '(제목 없음)',
+                        icsImported: '캘린더 일정 {n}개를 가져왔습니다. 다시 가져오면 현재 일정이 대체됩니다.',
+                        icsFailed: '가져오기 실패: 이 .ics 파일을 읽을 수 없습니다',
+                        macSynced: 'Mac 캘린더에서 일정 {n}개를 동기화했습니다.',
+                        macSyncFailed: 'Mac 캘린더를 동기화할 수 없습니다: {msg}',
+                        selectionInfo: '<span class="accent">{n}</span>일 선택됨 · {from} ~ {to}',
+                        backupImported: '백업을 가져왔습니다',
+                        backupInvalid: '잘못된 백업 파일 형식입니다',
+                        importFailed: '가져오기 실패: 잘못된 파일 형식입니다',
+                        langTitle: '언어 변경'
+                    }
+                },
+                'ru': {
+                    name: 'Русский',
+                    lunar: false,
+                    dict: {
+                        exportBackup: 'Экспортировать резервную копию',
+                        importBackup: 'Импортировать резервную копию',
+                        importIcsTitle: 'Импортировать локальный календарь (.ics)',
+                        importIcsAria: 'Импортировать локальный календарь',
+                        syncMac: 'Синхронизировать календарь Mac',
+                        todayTitle: 'Вернуться к сегодняшнему дню',
+                        today: 'Сегодня',
+                        clearSelection: 'Снять выделение',
+                        memoPlaceholder: 'Записать об этом дне...',
+                        delete: 'Удалить',
+                        cancel: 'Отмена',
+                        save: 'Сохранить',
+                        saveShortcut: '⌘+Enter для сохранения',
+                        headerToday: 'День <span class="accent">{n}</span> <span class="accent">·</span> осталось {m} дн.',
+                        headerTotal: '{total} дн.',
+                        untitled: '(без названия)',
+                        icsImported: 'Импортировано событий: {n}. Повторный импорт заменит текущие события.',
+                        icsFailed: 'Ошибка импорта: не удалось прочитать этот файл .ics',
+                        macSynced: 'Синхронизировано событий из календаря Mac: {n}.',
+                        macSyncFailed: 'Не удалось синхронизировать календарь Mac: {msg}',
+                        selectionInfo: 'Выбрано <span class="accent">{n}</span> дн. · {from} — {to}',
+                        backupImported: 'Резервная копия импортирована',
+                        backupInvalid: 'Недопустимый формат файла резервной копии',
+                        importFailed: 'Ошибка импорта: недопустимый формат файла',
+                        langTitle: 'Сменить язык'
+                    }
+                }
+            }
+        };
+
+        // 取串:占位符替换;key 缺失回退 zh-CN,防止漏译把 undefined 显示上屏
+        function t(key, params) {
+            const dict = (I18N.locales[app.locale] || I18N.locales['zh-CN']).dict;
+            let text = dict[key] ?? I18N.locales['zh-CN'].dict[key];
+            if (params) {
+                for (const [name, value] of Object.entries(params)) {
+                    text = text.split(`{${name}}`).join(value);
+                }
+            }
+            return text;
+        }
+
+        // Intl 格式化器按 locale+参数记忆化,首屏生成几百张卡片不会反复构造
+        const fmtCache = {};
+        function fmt(locale, options) {
+            const key = locale + JSON.stringify(options);
+            return fmtCache[key] ||= new Intl.DateTimeFormat(locale, options);
+        }
+
+        const isCJK = (locale) => /^(zh|ja|ko)/i.test(locale);
+
+        // 卡片月初标记的月名。zh narrow 恰为数字(等于旧硬编码);ja/ko narrow 带 月/월 后缀,
+        // 与数字标记的版式不符,退回纯数字;其余 locale 用 short
+        const monthNameCache = {};
+        function monthNames(locale) {
+            if (monthNameCache[locale]) return monthNameCache[locale];
+            const cjk = isCJK(locale);
+            const names = cjk && !locale.toLowerCase().startsWith('zh')
+                ? Array.from({ length: 12 }, (_, m) => String(m + 1))
+                : Array.from({ length: 12 }, (_, m) => fmt(locale, { month: cjk ? 'narrow' : 'short' }).format(new Date(2024, m, 15)));
+            monthNameCache[locale] = names;
+            return names;
+        }
+
         const app = {
             init: function() {
                 this.yearSelect = document.getElementById('yearSelect');
@@ -779,6 +1151,12 @@
                 if (window.webkit?.messageHandlers?.calendarSync) {
                     document.getElementById('systemCalendarButton').style.display = '';
                 }
+
+                // 语言必须在首次渲染前定死:本地保存的选择 > 浏览器语言 > 简体中文
+                this.locale = this.detectLocale(navigator.languages || []);
+                document.documentElement.lang = this.locale;
+                this.initLangSelect();
+                this.applyStaticText();
 
                 this.initYearSelect();
                 const thisYear = new Date().getFullYear();
@@ -820,9 +1198,64 @@
                 }
             },
 
+            // 语言选项用各语言的母语名,不跟随当前界面语言
+            initLangSelect: function() {
+                this.langSelect = document.getElementById('langSelect');
+                for (const [code, entry] of Object.entries(I18N.locales)) {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    option.textContent = entry.name;
+                    this.langSelect.appendChild(option);
+                }
+                this.langSelect.value = this.locale;
+                this.langSelect.addEventListener('change', (e) => this.applyLanguage(e.target.value));
+            },
+
+            // 显式保存的选择优先;否则按浏览器语言逐个匹配,港澳台繁中归 zh-TW,其余中文归 zh-CN
+            detectLocale: function(candidates) {
+                const saved = localStorage.getItem('lang');
+                if (saved && I18N.locales[saved]) return saved;
+                for (const tag of candidates) {
+                    const code = this.matchLocale(tag);
+                    if (code) return code;
+                }
+                return 'zh-CN';
+            },
+
+            matchLocale: function(tag) {
+                const base = String(tag).toLowerCase().split('-')[0];
+                if (I18N.locales[base]) return base;
+                if (base === 'zh') {
+                    return /-(hant|tw|hk|mo)(-|$)/i.test(String(tag).toLowerCase()) ? 'zh-TW' : 'zh-CN';
+                }
+                return null;
+            },
+
+            // 语言切换唯一入口:静态串、卡片、标题栏全部按新 locale 重建,滚动位置不动
+            applyLanguage: function(code) {
+                this.locale = code;
+                localStorage.setItem('lang', code);
+                document.documentElement.lang = code;
+                this.langSelect.value = code;
+                this.applyStaticText();
+                this.refreshCards();
+                this.updateHeaderInfo();
+            },
+
+            // data-i18n* 属性声明的静态串统一回填
+            applyStaticText: function() {
+                document.querySelectorAll('[data-i18n], [data-i18n-title], [data-i18n-aria], [data-i18n-placeholder]').forEach((el) => {
+                    if (el.dataset.i18n) el.textContent = t(el.dataset.i18n);
+                    if (el.dataset.i18nTitle) el.title = t(el.dataset.i18nTitle);
+                    if (el.dataset.i18nAria) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+                    if (el.dataset.i18nPlaceholder) el.placeholder = t(el.dataset.i18nPlaceholder);
+                });
+            },
+
             updateCalendar: function() {
                 // 与首屏走同一套生成逻辑,保证天数、节假日标记等一致
-                const year = parseInt(document.querySelector('.year-select').value);
+                // 用 this.yearSelect 取值:语言下拉复用 .year-select 样式,querySelector 会取到它
+                const year = parseInt(this.yearSelect.value, 10);
                 this.userScrolled = false; // 换年份视为重新进入默认视图
                 this.minYear = year;
                 this.maxYear = year;
@@ -996,20 +1429,28 @@
                 const dayNumber = document.createElement('div');
                 dayNumber.className = 'day-number';
                 if (date.getDate() === 1) {
-                    dayNumber.textContent = this.getMonthShort(date.getMonth());
+                    const monthLabel = monthNames(this.locale)[date.getMonth()];
+                    dayNumber.textContent = monthLabel;
                     dayNumber.classList.add('month-number');
+                    if (monthLabel.length > 2) dayNumber.classList.add('long-label');
                 } else {
                     dayNumber.textContent = date.getDate();
                 }
 
                 const dateInfo = document.createElement('div');
                 dateInfo.className = 'date-info';
-                const lunarDay = this.toLunarDate(date);
                 const weekDay = this.getWeekDay(date);
-                dateInfo.innerHTML = `
+                // 农历只给 lunar 语言显示;lunar span 不存在时 ::after 间距随之消失,不会留空隙。
+                // lunar 分支保持原模板的换行缩进:span 之间的空白节点参与行内排版,不能压成单行
+                if (I18N.locales[this.locale].lunar) {
+                    const lunarDay = this.toLunarDate(date);
+                    dateInfo.innerHTML = `
                     <span class="lunar-date">${lunarDay}</span>
                     <span class="week-day">${weekDay}</span>
                 `;
+                } else {
+                    dateInfo.innerHTML = `<span class="week-day">${weekDay}</span>`;
+                }
 
                 dayCard.appendChild(dayNumber);
                 dayCard.appendChild(dateInfo);
@@ -1041,9 +1482,9 @@
                 if (year === now.getFullYear()) {
                     // 当日零点与 1 月 1 日零点之差,ceil 抵消夏令时带来的 ±1 小时偏移
                     const dayOfYear = Math.ceil((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(year, 0, 1)) / 86400000) + 1;
-                    el.innerHTML = `第 <span class="accent">${dayOfYear}</span> 天 <span class="accent">·</span> 剩 ${total - dayOfYear} 天`;
+                    el.innerHTML = t('headerToday', { n: dayOfYear, m: total - dayOfYear });
                 } else {
-                    el.innerHTML = `共 ${total} 天`;
+                    el.innerHTML = t('headerTotal', { total });
                 }
             },
 
@@ -1051,16 +1492,6 @@
                 return date.getFullYear() === today.getFullYear() &&
                        date.getMonth() === today.getMonth() &&
                        date.getDate() === today.getDate();
-            },
-
-            getWeekdayName: function(day) {
-                const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-                return weekdays[day];
-            },
-
-            getMonthShort: function(month) {
-                const months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-                return months[month];
             },
 
             getDateKey: function(date) {
@@ -1071,14 +1502,12 @@
                 try {
                     // 使用lunar-javascript库转换日期
                     const lunar = Lunar.fromDate(date);
-                    
-                    // 如果是初一，显示月份
-                    if (lunar.getDay() === 1) {
-                        return lunar.getMonthInChinese() + '月';
-                    }
-                    
-                    // 否则显示日期
-                    return lunar.getDayInChinese();
+
+                    // 如果是初一，显示月份，否则显示日期
+                    let text = lunar.getDay() === 1 ? lunar.getMonthInChinese() + '月' : lunar.getDayInChinese();
+                    // 库只有简体输出,繁体界面把仅有的两个异形字转过去,其余简繁同形
+                    if (this.locale === 'zh-TW') text = text.replace(/闰/g, '閏').replace(/腊/g, '臘');
+                    return text;
                 } catch (e) {
                     console.error('农历转换错误:', e);
                     return '';
@@ -1086,23 +1515,28 @@
             },
 
             getWeekDay: function(date) {
-                const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
-                return weekDays[date.getDay()];
+                return fmt(this.locale, { weekday: isCJK(this.locale) ? 'narrow' : 'short' }).format(date);
+            },
+
+            // 浮层日期行:农历语言在日期与星期之间插农历(空格分隔,与历史版式一致),
+            // 其余语言整行交给 Intl,由它决定逗号与语序
+            memoDateLine: function(date, lunarDay) {
+                if (lunarDay) {
+                    const datePart = fmt(this.locale, { month: 'long', day: 'numeric' }).format(date);
+                    const weekPart = fmt(this.locale, { weekday: 'long' }).format(date);
+                    return `${datePart} ${lunarDay} ${weekPart}`;
+                }
+                return fmt(this.locale, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
             },
 
             openMemoModal: function(date) {
                 this.currentDate = date;
                 const dateKey = this.getDateKey(date);
                 
-                // 获取农历和星期
-                const lunarDay = this.toLunarDate(date);
-                const weekDay = this.getWeekDay(date);
-                
                 // 更新模态框日期显示
                 const memoDateEl = document.querySelector('.memo-date');
-                const month = date.getMonth() + 1;
-                const day = date.getDate();
-                memoDateEl.innerHTML = `${month}月${day}日 ${lunarDay} 星期${weekDay}`;
+                const lunarDay = I18N.locales[this.locale].lunar ? this.toLunarDate(date) : null;
+                memoDateEl.innerHTML = this.memoDateLine(date, lunarDay);
                 const eventList = document.getElementById('calendarEventList');
                 eventList.replaceChildren();
                 (this.events[dateKey] || []).forEach(item => {
@@ -1161,7 +1595,7 @@
                         const get = line => line?.slice(line.indexOf(':') + 1) || '';
                         const start = get(find('DTSTART')).match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
                         if (!start) return;
-                        const title = unescapeText(get(find('SUMMARY')) || '（无标题）');
+                        const title = unescapeText(get(find('SUMMARY')) || t('untitled'));
                         const time = start[4] ? `${start[4]}:${start[5]}` : '';
                         const recurringYearly = /(?:^|;)FREQ=YEARLY(?:;|$)/i.test(get(find('RRULE')));
                         const firstYear = recurringYearly ? Math.max(+start[1], new Date().getFullYear() - 10) : +start[1];
@@ -1186,9 +1620,9 @@
                     localStorage.setItem('calendarEventsVersion', '4');
                     this.refreshCards();
                     const count = Object.values(imported).reduce((sum, events) => sum + events.length, 0);
-                    alert(`已导入 ${count} 个日历事件；再次导入会替换当前事件。`);
+                    alert(t('icsImported', { n: count }));
                 } catch (error) {
-                    alert('导入失败：无法读取此 .ics 文件');
+                    alert(t('icsFailed'));
                 } finally { event.target.value = ''; }
             },
 
@@ -1210,11 +1644,11 @@
                 localStorage.setItem('calendarEvents', JSON.stringify(imported));
                 localStorage.setItem('calendarEventsVersion', '4');
                 this.refreshCards();
-                alert(`已从 Mac 日历同步 ${events.length} 个事件。`);
+                alert(t('macSynced', { n: events.length }));
             },
 
             receiveSystemCalendarError: function(message) {
-                alert(`无法同步 Mac 日历：${message}`);
+                alert(t('macSyncFailed', { msg: message }));
             },
 
             closeMemoModal: function() {
@@ -1436,12 +1870,12 @@
                 }
                 const cards = this.dayCards;
                 const label = (card) => {
-                    const parts = card.dataset.dateKey.split('-');
-                    return `${Number(parts[1])}月${Number(parts[2])}日`;
+                    const parts = card.dataset.dateKey.split('-').map(Number);
+                    return fmt(this.locale, { month: 'short', day: 'numeric' }).format(new Date(2000, parts[1] - 1, parts[2]));
                 };
                 const count = this.selection.endIndex - this.selection.startIndex + 1;
                 document.getElementById('selectionInfo').innerHTML =
-                    `已选 <span class="accent">${count}</span> 天 · ${label(cards[this.selection.startIndex])} 至 ${label(cards[this.selection.endIndex])}`;
+                    t('selectionInfo', { n: count, from: label(cards[this.selection.startIndex]), to: label(cards[this.selection.endIndex]) });
                 chip.style.display = 'flex';
             },
 
@@ -1482,12 +1916,12 @@
                             }
 
                             this.refreshCards();
-                            alert('备份导入成功');
+                            alert(t('backupImported'));
                         } else {
-                            alert('无效的备份文件格式');
+                            alert(t('backupInvalid'));
                         }
                     } catch (error) {
-                        alert('导入失败：无效的文件格式');
+                        alert(t('importFailed'));
                     }
                 };
                 reader.readAsText(file);
