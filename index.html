@@ -68,7 +68,8 @@
         .header-actions {
             position: absolute;
             left: 1vh;
-            top: 50%;
+            /* header 上内边距含安全区,中心点需下移 env/2 才落在标题一行;env=0 时与 50% 等价 */
+            top: calc(50% + env(safe-area-inset-top, 0px) / 2);
             transform: translateY(-50%);
             display: flex;
             gap: 12px;
@@ -118,7 +119,7 @@
         .header-right {
             position: absolute;
             right: 1vh;
-            top: 50%;
+            top: calc(50% + env(safe-area-inset-top, 0px) / 2);
             transform: translateY(-50%);
             display: flex;
             align-items: center;
@@ -1284,15 +1285,19 @@
                     }
                 });
 
-                // 浮层打开时:ESC 关闭(不保存,与「取消」一致);⌘/Ctrl+Enter、⌘/Ctrl+S 快捷保存
+                // 浮层打开时:ESC 关闭(不保存,与「取消」一致),⌘/Ctrl+Enter、⌘/Ctrl+S 快捷保存;
+                // 浮层关闭时:ESC 取消当前框选
                 document.addEventListener('keydown', (e) => {
-                    if (this.memoModal.style.display !== 'block') return;
-                    if (e.key === 'Escape') {
-                        this.closeMemoModal();
-                    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's' || e.key === 'S')) {
-                        e.preventDefault();
-                        this.saveMemo();
+                    if (this.memoModal.style.display === 'block') {
+                        if (e.key === 'Escape') {
+                            this.closeMemoModal();
+                        } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's' || e.key === 'S')) {
+                            e.preventDefault();
+                            this.saveMemo();
+                        }
+                        return;
                     }
+                    if (e.key === 'Escape' && this.selection) this.clearSelection();
                 });
 
                 // 拖拽框选:指针事件统一处理鼠标拖动与触摸长按拖动
