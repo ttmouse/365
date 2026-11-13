@@ -2036,17 +2036,31 @@
                 }
             },
 
+            // 完整农历「冬月初五」:浮层需要月份上下文(卡片上只有初一才露出月名,这里永远带月)
+            lunarFullText: function(date) {
+                try {
+                    const lunar = Lunar.fromDate(date);
+                    let text = lunar.getMonthInChinese() + '月' + lunar.getDayInChinese();
+                    // 库只有简体输出,繁体界面把仅有的两个异形字转过去,其余简繁同形
+                    if (this.locale === 'zh-TW') text = text.replace(/闰/g, '閏').replace(/腊/g, '臘');
+                    return text;
+                } catch (e) {
+                    console.error('农历转换错误:', e);
+                    return '';
+                }
+            },
+
             getWeekDay: function(date) {
                 return fmt(this.locale, { weekday: isCJK(this.locale) ? 'narrow' : 'short' }).format(date);
             },
 
-            // 浮层日期行:农历语言在日期与星期之间插农历(空格分隔,与历史版式一致),
+            // 浮层日期行:农历语言在日期与星期之间插完整农历「十月初五」(空格分隔,与历史版式一致),
             // 其余语言整行交给 Intl,由它决定逗号与语序
-            memoDateLine: function(date, lunarDay) {
-                if (lunarDay) {
+            memoDateLine: function(date, lunarText) {
+                if (lunarText) {
                     const datePart = fmt(this.locale, { month: 'long', day: 'numeric' }).format(date);
                     const weekPart = fmt(this.locale, { weekday: 'long' }).format(date);
-                    return `${datePart} ${lunarDay} ${weekPart}`;
+                    return `${datePart} ${lunarText} ${weekPart}`;
                 }
                 return fmt(this.locale, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
             },
@@ -2057,7 +2071,7 @@
                 
                 // 更新模态框日期显示
                 const memoDateEl = document.querySelector('.memo-date');
-                const lunarDay = I18N.locales[this.locale].lunar ? this.toLunarDate(date) : null;
+                const lunarDay = I18N.locales[this.locale].lunar ? this.lunarFullText(date) : null;
                 memoDateEl.innerHTML = this.memoDateLine(date, lunarDay);
                 const eventList = document.getElementById('calendarEventList');
                 eventList.replaceChildren();
