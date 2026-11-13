@@ -312,7 +312,6 @@
             transition-delay: 0s;
         }
 
-        .menu-panel .today-button,
         .menu-panel .mode-button {
             width: 100%;
             text-align: center;
@@ -994,6 +993,7 @@
             </div>
             <h1 id="headerInfo"></h1>
             <div class="header-right">
+                <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
                 <div class="menu-wrap" id="menuWrap">
                     <button id="menuToggle" class="menu-toggle" onclick="app.toggleMenu()" aria-haspopup="true" aria-expanded="false" title="设置" aria-label="设置" data-i18n-title="settingsTitle" data-i18n-aria="settingsTitle">
                         <svg viewBox="0 0 24 24">
@@ -1006,7 +1006,6 @@
                         </svg>
                     </button>
                     <div class="menu-panel" id="menuPanel">
-                        <button id="todayButton" class="today-button" onclick="app.goToday(); app.closeMenu()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
                         <button id="modeButton" class="mode-button" onclick="app.toggleMode(); app.closeMenu()" title="切换周对齐 / 自适应布局">周对齐</button>
                         <div class="menu-divider"></div>
                         <div class="menu-row">
