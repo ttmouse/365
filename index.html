@@ -204,14 +204,8 @@
             text-align: center;
             padding: 0;
             color: #666;
-            font-size: 10px;
+            font-size: 10px; /* 二级文字全站唯一字号,分档跳变已删除 */
             white-space: nowrap;
-        }
-
-        @media (min-width: 1200px) {
-            .date-info {
-                font-size: 11px;
-            }
         }
 
         @media (max-width: 768px) {
@@ -242,9 +236,6 @@
             }
             .day-card {
                 min-width: 0;
-            }
-            .date-info {
-                font-size: 9px;
             }
         }
 
@@ -317,6 +308,65 @@
         /* 周末星期标红提示,数字保持黑色,月份紫标不受影响 */
         .weekend .week-day {
             color: var(--accent-color);
+        }
+
+        /* 拖拽框选:格子禁用文字选择与长按呼出,选区用半透明色叠加,压过自定义底色 */
+        .calendar-grid {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .day-card.range-selected {
+            background-image: linear-gradient(rgba(255, 44, 83, 0.16), rgba(255, 44, 83, 0.16));
+        }
+
+        /* 已选天数提示条 */
+        .selection-chip {
+            display: none;
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 900;
+            align-items: center;
+            gap: 10px;
+            max-width: calc(100% - 24px);
+            padding: 8px 8px 8px 16px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 999px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            font-size: 13px;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        .selection-chip .accent {
+            font-weight: 600;
+        }
+
+        .selection-chip-clear {
+            border: none;
+            background: #f2f2f2;
+            color: #666;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .selection-chip-clear:hover {
+            background: var(--accent-color);
+            color: white;
         }
 
         .month-number {
@@ -614,6 +664,12 @@
         <div class="calendar-grid" id="calendarContainer"></div>
     </div>
 
+    <!-- 拖拽框选的已选天数提示 -->
+    <div class="selection-chip" id="selectionChip">
+        <span id="selectionInfo"></span>
+        <button class="selection-chip-clear" id="selectionClear" title="清除选择" aria-label="清除选择">✕</button>
+    </div>
+
     <!-- 添加备忘录浮层 -->
     <div class="modal" id="memoModal">
         <div class="modal-backdrop" id="modalBackdrop"></div>
@@ -690,6 +746,12 @@
             if (columnsChanged || keepDefaultCentered) app?.scrollToToday?.();
         }
 
+        // 拖拽框选手感参数
+        const DRAG_START_PX = 4;   // 鼠标按下后移动超过此距离进入框选
+        const TOUCH_CANCEL_PX = 8; // 触摸长按等待期间滑动超过此距离视为滚动,取消长按
+        const LONG_PRESS_MS = 260; // 触摸长按时长,超过即进入框选
+        const EDGE_SCROLL_PX = 48; // 指针进入滚动区边缘此带宽内时自动滚动
+
         const app = {
             init: function() {
                 this.yearSelect = document.getElementById('yearSelect');
@@ -699,6 +761,9 @@
                 this.memoText = document.getElementById('memoText');
                 this.memoDate = document.getElementById('memoDate');
                 this.currentDate = null;
+                this.selection = null;  // 框选区间 {startIndex, endIndex},索引即当年第几天
+                this.drag = null;       // 按压→框选 状态机,详见拖拽框选方法区
+                this._suppressClick = false;
                 this.memos = JSON.parse(localStorage.getItem('memos') || '{}');
                 this.colors = JSON.parse(localStorage.getItem('dayColors') || '{}');
                 this.events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
@@ -769,13 +834,17 @@
             generateCalendar: function(year) {
                 console.log('Generating calendar for year:', year);
                 const scrollTop = this.calendarContainer.scrollTop; // 重建后保持滚动位置
+                this.cancelDrag();
+                this.resetSelection(); // 重建后旧索引失效,框选区间一并清空
                 this.calendarContainer.innerHTML = '';
                 const today = new Date();
 
+                let dayIndex = 0;
                 for (let month = 0; month < 12; month++) {
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
                         const dayCard = this.createDayCard(date, today);
+                        dayCard.dataset.idx = dayIndex++;
                         this.calendarContainer.appendChild(dayCard);
                     }
                 }
@@ -803,6 +872,7 @@
                 dayCard.className = 'day-card';
                 
                 const dateKey = this.getDateKey(date);
+                dayCard.dataset.dateKey = dateKey;
                 const hasMemo = this.memos[dateKey];
                 const color = this.colors[dateKey];
                 
@@ -849,8 +919,9 @@
                 dayCard.appendChild(dayNumber);
                 dayCard.appendChild(dateInfo);
 
-                // 点击事件处理
+                // 点击事件处理(框选拖动结束派生的合成 click 被吞掉,不当作用户点击)
                 dayCard.addEventListener('click', () => {
+                    if (this._suppressClick) return;
                     this.openMemoModal(date);
                 });
 
@@ -1118,6 +1189,161 @@
                         this.saveMemo();
                     }
                 });
+
+                // 拖拽框选:指针事件统一处理鼠标拖动与触摸长按拖动
+                const grid = this.calendarContainer;
+                grid.addEventListener('pointerdown', (e) => this.onDragStart(e));
+                grid.addEventListener('pointermove', (e) => this.onDragMove(e));
+                grid.addEventListener('pointerup', (e) => this.onDragEnd(e));
+                grid.addEventListener('pointercancel', () => this.cancelDrag());
+                // 选区进行中拦掉页面滚动;还没进选区的触摸位移超阈值视为滚动,取消待触发的长按
+                grid.addEventListener('touchmove', (e) => {
+                    if (!this.drag) return;
+                    if (this.drag.phase === 'selecting') {
+                        e.preventDefault();
+                    } else {
+                        const t = e.touches[0];
+                        if (Math.hypot(t.clientX - this.drag.pressX, t.clientY - this.drag.pressY) > TOUCH_CANCEL_PX) {
+                            this.cancelDrag();
+                        }
+                    }
+                }, { passive: false });
+                document.getElementById('selectionClear').addEventListener('click', () => this.clearSelection());
+            },
+
+            // ---- 拖拽框选 ----
+            // 索引空间 = 网格子元素顺序(当年第 i 天);selection 是唯一选中状态,
+            // .range-selected 类只是它在 DOM 上的投影。drag 状态机:鼠标移动超阈值进入
+            // 框选,触摸长按进入框选;没进框选就松手视为普通点击,照常打开备忘浮层。
+            onDragStart: function(e) {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const card = e.target.closest('.day-card');
+                if (!card) return;
+                this.cancelDrag();
+                this.drag = {
+                    phase: 'press',
+                    pointerId: e.pointerId,
+                    pointerType: e.pointerType,
+                    anchor: parseInt(card.dataset.idx, 10),
+                    pressX: e.clientX,
+                    pressY: e.clientY,
+                    lastX: e.clientX,
+                    lastY: e.clientY,
+                };
+                if (e.pointerType !== 'mouse') {
+                    this.drag.timer = setTimeout(() => this.beginSelecting(), LONG_PRESS_MS);
+                }
+            },
+
+            beginSelecting: function() {
+                if (!this.drag || this.drag.phase !== 'press') return;
+                this.drag.phase = 'selecting';
+                try {
+                    this.calendarContainer.setPointerCapture(this.drag.pointerId);
+                } catch (err) { /* 指针已释放,收尾时自然结束 */ }
+                this.setSelectionRange(this.drag.anchor, this.drag.anchor);
+                this.startEdgeScroll();
+            },
+
+            onDragMove: function(e) {
+                if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+                this.drag.lastX = e.clientX;
+                this.drag.lastY = e.clientY;
+                if (this.drag.phase === 'press') {
+                    const moved = Math.hypot(e.clientX - this.drag.pressX, e.clientY - this.drag.pressY);
+                    if (!(this.drag.pointerType === 'mouse' && moved > DRAG_START_PX)) return;
+                    this.beginSelecting(); // 进入框选后不 return,当前位置要算进首个选区(快速甩动只有一次 move)
+                }
+                this.updateSelectionAt(e.clientX, e.clientY);
+            },
+
+            onDragEnd: function(e) {
+                if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+                const drag = this.drag;
+                this.cancelDrag();
+                if (drag.phase !== 'selecting') return;
+                this._suppressClick = true;
+                setTimeout(() => { this._suppressClick = false; }, 0);
+            },
+
+            cancelDrag: function() {
+                const drag = this.drag;
+                this.drag = null;
+                this.stopEdgeScroll();
+                if (drag?.timer) clearTimeout(drag.timer);
+            },
+
+            updateSelectionAt: function(x, y) {
+                const card = document.elementFromPoint(x, y)?.closest('.day-card');
+                if (!card) return;
+                const idx = parseInt(card.dataset.idx, 10);
+                this.setSelectionRange(Math.min(this.drag.anchor, idx), Math.max(this.drag.anchor, idx));
+            },
+
+            // 指针停在滚动区边缘时持续向内滚动,让长跨度框选能越过一屏
+            startEdgeScroll: function() {
+                const step = () => {
+                    if (!this.drag || this.drag.phase !== 'selecting') return;
+                    const rect = this.calendarContainer.getBoundingClientRect();
+                    const y = this.drag.lastY;
+                    let delta = 0;
+                    if (y < rect.top + EDGE_SCROLL_PX) delta = -Math.ceil((rect.top + EDGE_SCROLL_PX - y) / 6);
+                    else if (y > rect.bottom - EDGE_SCROLL_PX) delta = Math.ceil((y - (rect.bottom - EDGE_SCROLL_PX)) / 6);
+                    if (delta) {
+                        this.calendarContainer.scrollTop += delta;
+                        this.updateSelectionAt(this.drag.lastX, this.drag.lastY);
+                    }
+                    this._edgeRaf = requestAnimationFrame(step);
+                };
+                this._edgeRaf = requestAnimationFrame(step);
+            },
+
+            stopEdgeScroll: function() {
+                if (this._edgeRaf) cancelAnimationFrame(this._edgeRaf);
+                this._edgeRaf = null;
+            },
+
+            setSelectionRange: function(start, end) {
+                const prev = this.selection;
+                if (prev && prev.startIndex === start && prev.endIndex === end) return;
+                this.selection = { startIndex: start, endIndex: end };
+                const children = this.calendarContainer.children;
+                if (prev) {
+                    for (let i = prev.startIndex; i <= prev.endIndex; i++) children[i]?.classList.remove('range-selected');
+                }
+                for (let i = start; i <= end; i++) children[i]?.classList.add('range-selected');
+                this.updateSelectionChip();
+            },
+
+            clearSelection: function() {
+                const sel = this.selection;
+                if (!sel) return;
+                const children = this.calendarContainer.children;
+                for (let i = sel.startIndex; i <= sel.endIndex; i++) children[i]?.classList.remove('range-selected');
+                this.selection = null;
+                this.updateSelectionChip();
+            },
+
+            resetSelection: function() {
+                this.selection = null;
+                this.updateSelectionChip();
+            },
+
+            updateSelectionChip: function() {
+                const chip = document.getElementById('selectionChip');
+                if (!this.selection) {
+                    chip.style.display = 'none';
+                    return;
+                }
+                const children = this.calendarContainer.children;
+                const label = (card) => {
+                    const parts = card.dataset.dateKey.split('-');
+                    return `${Number(parts[1])}月${Number(parts[2])}日`;
+                };
+                const count = this.selection.endIndex - this.selection.startIndex + 1;
+                document.getElementById('selectionInfo').innerHTML =
+                    `已选 <span class="accent">${count}</span> 天 · ${label(children[this.selection.startIndex])} 至 ${label(children[this.selection.endIndex])}`;
+                chip.style.display = 'flex';
             },
 
             exportMemos: function() {
