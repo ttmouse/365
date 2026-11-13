@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>365</title>
     <meta name="theme-color" content="#ff2c53">
     <link rel="manifest" href="manifest.json">
@@ -45,7 +45,7 @@
             min-height: 0;
             display: flex;
             flex-direction: column;
-            padding: 0;
+            padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
             margin: 0;
             width: 100%;
             overflow: hidden;
@@ -53,7 +53,8 @@
 
         header {
             text-align: center;
-            padding: 0.5vh;
+            /* iOS 26 独立 PWA 把内容压到状态栏底下,env 无 cover 时恒为 0,靠 viewport-fit=cover + 这行补位 */
+            padding: calc(0.5vh + env(safe-area-inset-top, 0px)) 0.5vh 0.5vh;
             background: white;
             z-index: 100;
             position: relative; /* 作为内部绝对定位按钮/年份选择器的锚点 */
@@ -173,23 +174,41 @@
             min-height: 0;
             overflow-y: auto; /* 只有日历区域滚动,顶部导航不参与滚动 */
             overflow-anchor: none; /* 前插上一年后由 JS 精确补 scrollTop,浏览器的滚动锚定不能再补一次 */
-            padding: 0;
-            margin: 0;
+            padding: 0 0 env(safe-area-inset-bottom, 0px);
+            margin: 0 auto;
             width: 100%;
-            min-width: 560px; /* 确保最小宽度能容纳7个80px的卡片 */
+            max-width: 1200px; /* 周对齐必须固定 7 列,超宽屏限宽居中,格子不会拉成扁条 */
             border-top: 1px solid #f0f0f0;
             border-left: 1px solid #f0f0f0;
         }
 
-        /* 每年一个 block,网格下放到 block 上,多个 block 纵向堆成连续年历 */
+        /* 星期表头:7 列与下方网格同宽同列,周末列标红 */
+        .week-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            padding: 6px 0;
+            flex-shrink: 0;
+            user-select: none;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .week-header .wk-end {
+            color: var(--accent-color);
+        }
+
+        /* 每年一个 block,固定 7 列周对齐(周一为首列),多个 block 纵向堆成连续年历 */
         .year-block {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            grid-template-columns: repeat(7, 1fr);
             gap: 0;
         }
 
         .day-card {
-            aspect-ratio: 1;
             border-right: 1px solid #f0f0f0;
             border-bottom: 1px solid #f0f0f0;
             display: flex;
@@ -201,8 +220,15 @@
             background: white;
             transition: background-color 0.2s ease; /* 只过渡颜色,布局尺寸变化即时生效 */
             font-size: 0.8em;
-            padding: 2px;
+            padding: 10px 2px;
             overflow: hidden; /* 格子缩小时裁剪超长文字,不压到相邻格子 */
+        }
+
+        /* 月初/年末对齐用的空白格,只补网格线,不可交互 */
+        .blank-cell {
+            border-right: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            background: white;
         }
 
         .date-info {
@@ -215,7 +241,7 @@
 
         @media (max-width: 768px) {
             header {
-                padding: 0.5vh 8px;
+                padding: calc(0.5vh + env(safe-area-inset-top, 0px)) 8px 0.5vh;
             }
             h1 {
                 font-size: 1.1em;
@@ -236,10 +262,7 @@
                 padding: 3px 20px 3px 8px;
             }
             .calendar-grid {
-                min-width: 0; /* 手机上不再强制560px,避免每周后两天被截断 */
-            }
-            .year-block {
-                grid-template-columns: repeat(5, 1fr);
+                min-width: 0;
             }
             .day-card {
                 min-width: 0;
@@ -333,7 +356,7 @@
             display: none;
             position: fixed;
             left: 50%;
-            bottom: 18px;
+            bottom: calc(18px + env(safe-area-inset-bottom, 0px));
             transform: translateX(-50%);
             z-index: 900;
             align-items: center;
@@ -668,6 +691,9 @@
                 <select id="yearSelect" class="year-select"></select>
             </div>
         </header>
+        <div class="week-header">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="wk-end">六</span><span class="wk-end">日</span>
+        </div>
         <div class="calendar-grid" id="calendarContainer"></div>
     </div>
 
@@ -703,61 +729,6 @@
     </div>
 
     <script>
-        // 让每一行的高度等于格子宽度,保证格子是正方形
-        // (grid 默认会把卡片拉伸到 auto 行的内容高度,aspect-ratio 不可靠,这里显式指定)
-        function applySquareRows(container) {
-            const firstTrack = parseFloat(getComputedStyle(container).gridTemplateColumns);
-            if (firstTrack > 0) {
-                container.style.gridAutoRows = `${Math.round(firstTrack)}px`;
-            }
-        }
-
-        // 将布局调整逻辑抽取为独立函数
-        // fromResize=true 表示由窗口尺寸变化触发
-        function adjustLayout(fromResize) {
-            const container = document.querySelector('.calendar-grid');
-
-            // 用户没有手动滚动过(默认视图)时,任何窗口变化后都保持今天居中;
-            // 用户手动滚走后,resize 一律不再拉回(手机工具栏收起等不打扰浏览)
-            const keepDefaultCentered = fromResize && app?.userScrolled === false;
-
-            // 手机端交给 CSS 固定5列,不再用 JS 计算
-            if (window.innerWidth <= 768) {
-                const blocks = container.querySelectorAll('.year-block');
-                const hadCustomColumns = [...blocks].some(block => block.style.gridTemplateColumns);
-                blocks.forEach(block => {
-                    block.style.gridTemplateColumns = '';
-                    applySquareRows(block);
-                });
-                // 布局切换或默认视图跟随窗口变化,重新让今天居中
-                if (hadCustomColumns || keepDefaultCentered) app?.scrollToToday?.();
-                return;
-            }
-
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight;
-            if (!containerWidth || !containerHeight) return;
-
-            // 按可视区域宽高比算理想列数(格子保持正方形,365/366 天尽量铺满一屏)
-            const totalDays = 366; // 使用366以适应闰年
-            const idealColumns = Math.round(Math.sqrt(totalDays * containerWidth / containerHeight));
-            // 每格宽度不小于80px:列数超过就减列,改为纵向滚动
-            const maxColumns = Math.max(1, Math.floor((containerWidth - 4) / 80));
-            const columns = Math.max(1, Math.min(idealColumns, maxColumns));
-
-            const columnsChanged = columns !== adjustLayout.lastColumns;
-            adjustLayout.lastColumns = columns;
-
-            // 用精确列数,保证格子宽度与卡片一致,不会互相压盖
-            container.querySelectorAll('.year-block').forEach(block => {
-                block.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
-                applySquareRows(block);
-            });
-
-            // 列数变化意味着格子尺寸变了,重新让今天居中(用户没滚走时)
-            if (columnsChanged || keepDefaultCentered) app?.scrollToToday?.();
-        }
-
         // 拖拽框选手感参数
         const DRAG_START_PX = 4;   // 鼠标按下后移动超过此距离进入框选
         const TOUCH_CANCEL_PX = 8; // 触摸长按等待期间滑动超过此距离视为滚动,取消长按
@@ -811,8 +782,6 @@
                     });
                 });
 
-                // 初始化时调用一次布局调整
-                adjustLayout();
                 // 默认定位:让今天出现在页面中间
                 this.scrollToToday();
             },
@@ -841,7 +810,6 @@
                 this.resetSelection(); // 重建后旧索引失效,框选区间一并清空
                 this.reindexCards();
                 this.updateHeaderInfo();
-                adjustLayout();
                 // 当年回到今天;其他年份定位到 1 月
                 if (year === new Date().getFullYear()) {
                     this.scrollToToday();
@@ -868,21 +836,32 @@
                 block.dataset.year = year;
                 const today = new Date();
 
+                // 周一为首列,周末固定列。偏移 = 1 日目标列与当前流位置的差,
+                // 不是星期几本身(连续流里上月尾部已占列)
+                let cells = 0;
                 for (let month = 0; month < 12; month++) {
+                    const targetCol = (new Date(year, month, 1).getDay() + 6) % 7;
+                    const offset = (targetCol - cells % 7 + 7) % 7;
+                    cells += offset;
+                    for (let i = 0; i < offset; i++) {
+                        const blank = document.createElement('div');
+                        blank.className = 'blank-cell';
+                        block.appendChild(blank);
+                    }
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
                         block.appendChild(this.createDayCard(date, today));
+                        cells++;
                     }
                 }
+                // 补齐末行空白,每一年都是完整矩形
+                const remainder = cells % 7;
+                for (let i = remainder; i > 0 && i < 7; i++) {
+                    const blank = document.createElement('div');
+                    blank.className = 'blank-cell';
+                    block.appendChild(blank);
+                }
                 return block;
-            },
-
-            // 新 block 沿用当前列数(手机端交给 CSS 固定5列),行高按自身列宽重算
-            styleYearBlock: function(block) {
-                block.style.gridTemplateColumns = window.innerWidth <= 768 || !adjustLayout.lastColumns
-                    ? ''
-                    : `repeat(${adjustLayout.lastColumns}, 1fr)`;
-                applySquareRows(block);
             },
 
             // 拖拽框选的索引空间 = 全部卡片的文档顺序(跨年连续);block 结构变化后统一重编
@@ -894,7 +873,6 @@
             appendYear: function(year) {
                 const block = this.renderYearBlock(year);
                 this.calendarContainer.appendChild(block);
-                this.styleYearBlock(block);
                 this.maxYear = year;
                 this.reindexCards(); // 旧卡片的索引不变,新卡片接在后面
             },
@@ -904,7 +882,6 @@
                 this.clearSelection(); // 前插使所有索引整体后移,旧选区先按旧索引清掉
                 const block = this.renderYearBlock(year);
                 scroller.prepend(block);
-                this.styleYearBlock(block);
                 this.minYear = year;
                 this.reindexCards();
                 this.minYear = year;
@@ -1532,7 +1509,8 @@
 
         // 监听窗口大小变化
         window.addEventListener('resize', () => {
-            adjustLayout(true);
+            // 列宽随窗口变化;默认视图跟着把今天重新居中,手动滚走则不打扰
+            if (app?.userScrolled === false) app?.scrollToToday?.();
             app?.syncHeaderYear?.(); // 行高变化可能移动视口中心所在的年份
         });
 
