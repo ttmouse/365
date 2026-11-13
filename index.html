@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>365</title>
     <meta name="theme-color" content="#d9482e">
     <link rel="preload" href="fonts/fraunces-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
@@ -52,6 +52,7 @@
         body {
             height: 100%;
             overflow: hidden; /* 页面整体不滚动,顶部导航永远固定可见 */
+            touch-action: manipulation; /* 禁双击缩放:viewport 的 maximum-scale 在部分内嵌 WebView 不生效,这里兜底 */
         }
 
         body {
