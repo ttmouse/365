@@ -314,8 +314,7 @@
             background-color: #f8f8f8;
         }
 
-        /* 周末数字与星期标红(中华日历惯例),月份紫标保持原色 */
-        .weekend .day-number:not(.month-number),
+        /* 周末星期标红提示,数字保持黑色,月份紫标不受影响 */
         .weekend .week-day {
             color: var(--accent-color);
         }
@@ -635,7 +634,7 @@
             <div class="memo-buttons">
                 <button class="memo-button delete-button" id="deleteButton">删除</button>
                 <button class="memo-button cancel-button" id="cancelButton">取消</button>
-                <button class="memo-button save-button" id="saveButton">保存</button>
+                <button class="memo-button save-button" id="saveButton" title="⌘+Enter 快捷保存">保存</button>
             </div>
         </div>
     </div>
@@ -1109,10 +1108,14 @@
                     }
                 });
 
-                // 浮层打开时,按 ESC 关闭(不保存,与「取消」一致)
+                // 浮层打开时:ESC 关闭(不保存,与「取消」一致);⌘/Ctrl+Enter、⌘/Ctrl+S 快捷保存
                 document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && this.memoModal.style.display === 'block') {
+                    if (this.memoModal.style.display !== 'block') return;
+                    if (e.key === 'Escape') {
                         this.closeMemoModal();
+                    } else if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's' || e.key === 'S')) {
+                        e.preventDefault();
+                        this.saveMemo();
                     }
                 });
             },
