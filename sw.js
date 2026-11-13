@@ -1,13 +1,14 @@
 // 365 年历 Service Worker
 // 策略:页面导航先网后缓存(改版立即生效,离线兜底);其余同源资源缓存优先
-const CACHE = '365-v8';
+const CACHE = '365-v9';
 const PRECACHE = [
     './',
     './index.html',
     './manifest.json',
     './icon-180.png',
     './icon-192.png',
-    './icon-512.png'
+    './icon-512.png',
+    './fonts/fraunces-latin-wght.woff2'
 ];
 
 self.addEventListener('install', (e) => {

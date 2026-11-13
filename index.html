@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>365</title>
-    <meta name="theme-color" content="#ff2c53">
+    <meta name="theme-color" content="#d9482e">
+    <link rel="preload" href="fonts/fraunces-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png">
     <meta name="mobile-web-app-capable" content="yes">
@@ -14,6 +15,16 @@
     <link rel="apple-touch-icon" href="icon-180.png">
     <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.7/lunar.js"></script>
     <style>
+        /* 自托管 Fraunces 可变字体(latin 子集 36KB,国内可达、SW 预缓存离线可用),
+           只负责数字与拉丁字符的排版身份;中文回落系统字体,两套字形混排是历书的常规做法 */
+        @font-face {
+            font-family: 'Fraunces Local';
+            src: url('fonts/fraunces-latin-wght.woff2') format('woff2-variations'),
+                 url('fonts/fraunces-latin-wght.woff2') format('woff2');
+            font-weight: 300 600;
+            font-display: swap;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -22,7 +33,19 @@
         }
 
         :root {
-            --accent-color: #ff2c53;
+            /* 印刷纸历色板:暖米纸底、暖墨、单一朱红强调(取自朱砂印泥,替换旧玫红+紫双强调) */
+            --accent-color: #d9482e;
+            --accent-deep: #b53a20;
+            --accent-soft: rgba(217, 72, 46, 0.14);
+            --paper: #faf6ee;
+            --tile: #fffdf8;
+            --ink: #26221c;
+            --ink-2: #6f6759;
+            --ink-3: #a79d8d;
+            --hairline: rgba(38, 34, 28, 0.08);
+            --tile-radius: 9px;
+            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+            --ease-travel: cubic-bezier(0.32, 0.72, 0, 1);
         }
 
         html,
@@ -33,11 +56,23 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #fff;
+            background-color: var(--paper);
+            color: var(--ink);
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
+        }
+
+        /* 纸张颗粒:固定层细噪点,给纯色底一点物理质感;不随内容滚动,不拦截指针 */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            pointer-events: none;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3e%3cfilter id='n'%3e%3cfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3e%3c/filter%3e%3crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3e%3c/svg%3e");
         }
 
         .container {
@@ -54,15 +89,15 @@
         header {
             text-align: center;
             /* iOS 独立 PWA 会把内容压到状态栏底下,env 无 viewport-fit=cover 时恒为 0,靠上面 meta + 这行补位 */
-            padding: calc(0.5vh + env(safe-area-inset-top, 0px)) 0.5vh 0.5vh;
-            background: white;
+            padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+            background: var(--paper);
+            border-bottom: 1px solid var(--hairline);
             z-index: 100;
             position: relative; /* 作为内部绝对定位按钮/年份选择器的锚点 */
             flex-shrink: 0; /* 固定在顶部,不随滚动消失 */
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .header-actions {
@@ -78,42 +113,48 @@
         .header-actions button {
             background: none;
             border: none;
-            padding: 4px;
+            padding: 5px;
             cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.2s, all 0.3s;
+            color: var(--ink-3);
+            border-radius: 8px;
+            transition: color 0.25s var(--ease-out), transform 0.25s var(--ease-out), background-color 0.25s var(--ease-out);
         }
 
         .header-actions button:hover {
-            opacity: 0.8;
-            transform: translateY(-1px);
+            color: var(--accent-deep);
+            background: var(--accent-soft);
         }
 
         .header-actions button:active {
-            transform: translateY(0);
+            transform: scale(0.92);
         }
 
         .header-actions svg {
-            width: 16px;
-            height: 16px;
+            width: 17px;
+            height: 17px;
             fill: none;
             stroke: currentColor;
-            stroke-width: 2;
+            stroke-width: 1.6;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
 
         h1 {
-            font-size: 2em;
-            color: #333;
+            font-family: 'Fraunces Local', Georgia, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', serif;
+            font-optical-sizing: auto;
+            font-size: 1.9em;
+            font-weight: 540;
+            letter-spacing: -0.015em;
+            color: var(--ink);
             margin: 0;
             display: inline-block;
-            line-height: 1.2;
+            line-height: 1.15;
             white-space: nowrap;
         }
 
         .accent {
             color: var(--accent-color);
+            font-weight: 600;
         }
 
         .header-right {
@@ -128,46 +169,55 @@
 
         .today-button {
             font-size: 0.9em;
-            padding: 4px 10px;
-            border: 1px solid rgba(255, 44, 83, 0.35);
-            border-radius: 3px;
-            background: white;
-            color: var(--accent-color);
+            padding: 5px 13px;
+            border: 1px solid rgba(217, 72, 46, 0.38);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--accent-deep);
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s;
+            transition: background-color 0.3s var(--ease-out), border-color 0.3s var(--ease-out), transform 0.3s var(--ease-out);
         }
 
         .today-button:hover {
-            background: #fff5f7;
+            background: var(--accent-soft);
             border-color: var(--accent-color);
         }
 
         .today-button:active {
-            transform: translateY(0);
+            transform: scale(0.95);
         }
 
         .year-select {
             font-size: 0.9em;
-            padding: 4px 24px 4px 12px;
-            border: 1px solid rgba(0,0,0,0.1);
-            border-radius: 3px;
-            background: white;
-            color: #666;
+            padding: 5px 26px 5px 13px;
+            border: 1px solid var(--hairline);
+            border-radius: 999px;
+            background-color: var(--tile);
+            color: var(--ink-2);
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
-            padding-right: 12px;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f6759' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
             background-repeat: no-repeat;
-            background-position: right 8px center;
-            background-size: 12px;
-            transition: all 0.2s;
+            background-position: right 9px center;
+            background-size: 11px;
+            transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
         }
 
         .year-select:hover {
-            border-color: rgba(0,0,0,0.2);
-            background-color: #fafafa;
+            border-color: rgba(38, 34, 28, 0.2);
+            color: var(--ink);
+        }
+
+        .year-select:focus-visible,
+        .today-button:focus-visible,
+        .mode-button:focus-visible,
+        .header-actions button:focus-visible,
+        .selection-chip-clear:focus-visible,
+        .memo-button:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
         }
 
         /* 语言下拉限宽,长语言名(如 Português)不把居中标题挤走 */
@@ -175,86 +225,193 @@
             max-width: 96px;
         }
 
+        /* 布局模式切换:展示的是点击后进入的模式 */
+        .mode-button {
+            font-size: 0.9em;
+            padding: 5px 13px;
+            border: 1px solid var(--hairline);
+            border-radius: 999px;
+            background: var(--tile);
+            color: var(--ink-2);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: border-color 0.3s var(--ease-out), color 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+        }
+
+        .mode-button:hover {
+            border-color: rgba(38, 34, 28, 0.2);
+            color: var(--ink);
+        }
+
+        .mode-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 布局模式:默认无缝自适应(auto-fill 铺满,1月1日紧接上一年);
+           mode-aligned = 固定7列周对齐,周一为首列,周末列由表头与卡片星期字标红 */
+        .calendar-grid.mode-aligned {
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: minmax(64px, auto); /* overflow:hidden 会让 auto 行按最小内容塌成 padding 高,行高必须显式给 */
+            gap: 2px;
+        }
+
+        /* 7 列下正方形格子太高,周对齐时行高交给上面的显式行高 */
+        .calendar-grid.mode-aligned .day-card {
+            aspect-ratio: auto;
+            padding: 10px 2px;
+        }
+
+        /* 对齐空白格:自适应模式 display:none(网格无缝),周对齐模式显形为空位 */
+        .blank-cell {
+            display: none;
+        }
+
+        .calendar-grid.mode-aligned .blank-cell {
+            display: block;
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            cursor: default;
+        }
+
+        /* 星期表头:仅周对齐模式显示,7 列与网格同列同宽,周末两列朱红 */
+        .week-header {
+            display: none;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 10px;
+            letter-spacing: 0.02em;
+            color: var(--ink-3);
+            padding: 2px 10px 6px;
+            user-select: none;
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .week-header .wk-end {
+            color: var(--accent-deep);
+        }
+
         .calendar-grid {
             flex: 1;
             min-height: 0;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 3px;
             overflow-y: auto; /* 只有日历区域滚动,顶部导航不参与滚动 */
             overflow-anchor: none; /* 前插上一年后由 JS 精确补 scrollTop,浏览器的滚动锚定不能再补一次 */
-            padding: 0 0 env(safe-area-inset-bottom, 0px);
-            margin: 0;
+            padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 0px));
+            margin: 0 auto;
             width: 100%;
-            min-width: 560px; /* 确保最小宽度能容纳7个80px的卡片 */
-            border-top: 1px solid #f0f0f0;
-            border-left: 1px solid #f0f0f0;
+            max-width: 1280px; /* 超宽屏限宽居中,纸面排版不被拉散 */
+            border-top: 1px solid var(--hairline);
         }
 
+        /* 瓷片化的一天:去掉共享 1px 灰边框,间隙里透出纸底,圆角瓷片轻微浮起 */
         .day-card {
             aspect-ratio: 1;
-            border-right: 1px solid #f0f0f0;
-            border-bottom: 1px solid #f0f0f0;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            gap: 1px;
             cursor: pointer;
             position: relative;
-            background: white;
-            transition: background-color 0.2s ease; /* 只过渡颜色,布局尺寸变化即时生效 */
+            background: var(--tile);
+            border-radius: var(--tile-radius);
+            box-shadow: 0 1px 2px rgba(38, 34, 28, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            transition: background-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), transform 0.25s var(--ease-out); /* 只过渡颜色/阴影/位移,布局尺寸变化即时生效 */
             font-size: 0.8em;
-            padding: 2px;
+            padding: 4px 2px;
             overflow: hidden; /* 格子缩小时裁剪超长文字,不压到相邻格子 */
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .day-card:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(38, 34, 28, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            }
+        }
+
+        .day-card:active {
+            transform: scale(0.96);
+        }
+
+        /* 首屏卡片错峰浮入;JS 只给首屏渲染的卡片挂 .enter 和 --i,换数据重建的卡片不重播 */
+        .day-card.enter {
+            animation: tile-in 0.55s var(--ease-travel) both;
+            animation-delay: var(--i, 0ms);
+        }
+
+        @keyframes tile-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .date-info {
             text-align: center;
             padding: 0;
-            color: #666;
+            color: var(--ink-3);
             font-size: 10px; /* 二级文字全站唯一字号,分档跳变已删除 */
+            letter-spacing: 0.02em;
             white-space: nowrap;
         }
 
         @media (max-width: 768px) {
             header {
-                padding: calc(0.5vh + env(safe-area-inset-top, 0px)) 8px 0.5vh;
+                padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px;
                 /* 手机改两行:标题独占一行,图标与控件合并成第二行。加语言下拉后单行放不下,
                    375px 视口会压住标题(zh 标题 154px/控件约 180px,单行需 ≥528px) */
                 flex-wrap: wrap;
-                row-gap: 4px;
+                row-gap: 5px;
             }
             h1 {
-                font-size: 1.1em;
+                font-size: 1.15em;
                 width: 100%;
                 order: 1;
             }
             .header-actions {
                 position: static;
                 transform: none;
-                gap: 8px;
+                gap: 4px;
                 order: 3; /* 与 .header-right 同排 */
-                margin-left: 12px;
+                margin-left: 10px;
             }
             .header-right {
                 position: static;
                 transform: none;
-                gap: 6px;
+                gap: 5px;
                 order: 2;
             }
-            .today-button {
+            .today-button,
+            .mode-button {
                 font-size: 0.8em;
                 padding: 3px 8px;
             }
             .year-select {
                 font-size: 0.8em;
-                padding: 3px 20px 3px 8px;
+                padding: 3px 22px 3px 10px;
+                background-position: right 8px center;
+            }
+            .week-header {
+                padding: 2px 6px 4px;
             }
             .calendar-grid {
                 min-width: 0; /* 手机上不再强制560px,避免每周后两天被截断 */
                 grid-template-columns: repeat(5, 1fr);
+                gap: 2px;
+                padding: 6px 6px calc(10px + env(safe-area-inset-bottom, 0px));
             }
             .day-card {
                 min-width: 0;
+                border-radius: 7px;
             }
         }
 
@@ -264,11 +421,11 @@
 
         /* 农历是主信息,星期是重复性辅助信息,分色后「初五 五」不再混成一团 */
         .lunar-date {
-            color: #555;
+            color: var(--ink-2);
         }
 
         .week-day {
-            color: #b9b9b9;
+            color: var(--ink-3);
         }
 
         .lunar-date::after {
@@ -282,29 +439,34 @@
             color: white !important;
         }
 
-        .today {
-            background: var(--accent-color);
-        }
-
         .month-start {
-            background-color: #fafafa;
+            box-shadow: 0 1px 2px rgba(38, 34, 28, 0.04), inset 0 0 0 1px rgba(217, 72, 46, 0.16); /* 月初瓷片描一圈朱红细线,代替旧灰底 */
         }
 
         .today {
             background-color: var(--accent-color) !important;
-            border: none;
-            color: white;
-            box-shadow: 0 2px 8px rgba(255, 160, 122, 0.3);
+            color: #fff7ef;
+            box-shadow: 0 5px 16px rgba(217, 72, 46, 0.38), 0 1px 3px rgba(181, 58, 32, 0.3);
+            animation: today-breath 3.6s ease-in-out infinite alternate;
+        }
+
+        /* 今天是一年的锚点:印章红底下做极轻的呼吸,幅度只到阴影,不动布局 */
+        @keyframes today-breath {
+            from { box-shadow: 0 5px 16px rgba(217, 72, 46, 0.32), 0 1px 3px rgba(181, 58, 32, 0.3); }
+            to { box-shadow: 0 7px 22px rgba(217, 72, 46, 0.5), 0 1px 3px rgba(181, 58, 32, 0.3); }
         }
 
         .day-number {
-            font-size: 1.8em;
-            font-weight: 500;
-            color: #333;
+            font-family: 'Fraunces Local', Georgia, -apple-system, BlinkMacSystemFont, serif;
+            font-optical-sizing: auto;
+            font-size: 1.7em;
+            font-weight: 460;
+            letter-spacing: -0.01em;
+            color: var(--ink);
         }
 
-        .has-events::before { content: ''; position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; background: #3978c5; }
-        .today.has-events::before { background: white; }
+        .has-events::before { content: ''; position: absolute; top: 5px; left: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent-deep); opacity: 0.85; }
+        .today.has-events::before { background: #fff7ef; }
         .calendar-event-list { max-height: 110px; overflow: auto; margin: 0 0 12px; padding: 0; list-style: none; font-size: 13px; color: #555; }
         .calendar-event-list li { padding: 5px 8px; margin: 3px 0; background: #f5f7fa; border-left: 3px solid #3978c5; border-radius: 3px; }
         .calendar-event-list:empty { display: none; }
@@ -312,21 +474,17 @@
 
         .today .day-number,
         .today .date-info {
-            color: white !important; /* 今天卡红底白字,必须压过周末红 */
+            color: #fff7ef !important; /* 今天卡红底米白字,必须压过周末红 */
         }
 
         .today.has-memo::after {
-            background: white;
-            box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+            background: #fff7ef;
+            box-shadow: 0 0 4px rgba(255, 247, 239, 0.45);
         }
 
-        .weekend {
-            background-color: #f8f8f8;
-        }
-
-        /* 周末星期标红提示,数字保持黑色,月份紫标不受影响 */
+        /* 周末不再铺灰底,只用朱红星期字做信号,纸面更安静 */
         .weekend .week-day {
-            color: var(--accent-color);
+            color: var(--accent-deep);
         }
 
         /* 拖拽框选:格子禁用文字选择与长按呼出,选区用半透明色叠加,压过自定义底色 */
@@ -337,10 +495,11 @@
         }
 
         .day-card.range-selected {
-            background-image: linear-gradient(rgba(255, 44, 83, 0.16), rgba(255, 44, 83, 0.16));
+            background-image: linear-gradient(var(--accent-soft), var(--accent-soft));
+            box-shadow: inset 0 0 0 1px rgba(217, 72, 46, 0.28), 0 1px 2px rgba(38, 34, 28, 0.04);
         }
 
-        /* 已选天数提示条 */
+        /* 已选天数提示条:暖玻璃胶囊,从下方弹入(display 切换会重播动画) */
         .selection-chip {
             display: none;
             position: fixed;
@@ -352,24 +511,38 @@
             gap: 10px;
             max-width: calc(100% - 24px);
             padding: 8px 8px 8px 16px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(255, 253, 248, 0.88);
+            backdrop-filter: blur(12px) saturate(1.1);
+            -webkit-backdrop-filter: blur(12px) saturate(1.1);
+            border: 1px solid rgba(38, 34, 28, 0.08);
             border-radius: 999px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 12px 32px rgba(38, 34, 28, 0.16), 0 1px 2px rgba(38, 34, 28, 0.06);
             font-size: 13px;
-            color: #333;
+            color: var(--ink);
             white-space: nowrap;
+            animation: chip-in 0.45s var(--ease-travel);
+        }
+
+        @keyframes chip-in {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(14px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0) scale(1);
+            }
         }
 
         .selection-chip .accent {
+            font-family: 'Fraunces Local', Georgia, serif;
             font-weight: 600;
         }
 
         .selection-chip-clear {
             border: none;
-            background: #f2f2f2;
-            color: #666;
+            background: rgba(38, 34, 28, 0.06);
+            color: var(--ink-2);
             width: 24px;
             height: 24px;
             border-radius: 50%;
@@ -380,23 +553,29 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: all 0.2s;
+            transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
         }
 
         .selection-chip-clear:hover {
             background: var(--accent-color);
-            color: white;
+            color: #fff7ef;
+        }
+
+        .selection-chip-clear:active {
+            transform: scale(0.9);
         }
 
         .month-number {
-            color: #8c3b90;
-            font-size: 2.2em;
-            font-weight: bold;
+            font-family: 'Fraunces Local', Georgia, serif;
+            color: var(--accent-deep);
+            font-size: 2em;
+            font-weight: 560;
         }
 
         /* sept/févr. 这类 3 字符以上的月短名塞不进手机格子,降一档字号 */
         .month-number.long-label {
-            font-size: 1.2em;
+            font-size: 1.25em;
+            font-weight: 480;
         }
 
         /* 添加备忘标记样式 */
@@ -429,10 +608,16 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(4px);
+            background: rgba(38, 30, 22, 0.32);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             display: none;
-            transition: all 0.3s;
+            animation: backdrop-in 0.35s var(--ease-out);
+        }
+
+        @keyframes backdrop-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .modal-content {
@@ -440,31 +625,36 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
-            padding: 32px;
-            border-radius: 16px;
+            background: #fffdf8;
+            padding: 30px 30px 26px;
+            border-radius: 22px;
             width: 90%;
             max-width: 500px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 24px 64px rgba(38, 30, 22, 0.22), 0 2px 6px rgba(38, 30, 22, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            animation: modal-in 0.45s var(--ease-travel);
         }
 
-        @keyframes modalSlideIn {
+        @keyframes modal-in {
             from {
                 opacity: 0;
-                transform: translate(-50%, -45%);
+                transform: translate(-50%, -50%) scale(0.94) translateY(14px);
             }
             to {
                 opacity: 1;
-                transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%) scale(1) translateY(0);
             }
         }
 
         .memo-date {
-            font-size: 20px;
-            color: #444;
+            font-family: 'Fraunces Local', Georgia, -apple-system, BlinkMacSystemFont, 'PingFang SC', serif;
+            font-size: 19px;
+            font-weight: 540;
+            letter-spacing: 0.01em;
+            color: var(--ink);
             text-align: center;
             margin-bottom: 20px;
+            position: relative; /* 锚定 ::after 下划线,否则它会飘到整张卡片的底边 */
+            padding-bottom: 12px;
         }
 
         .memo-date::after {
@@ -482,46 +672,51 @@
         .memo-textarea {
             width: 100%;
             height: 200px;
-            padding: 20px;
-            border: 2px solid #eee;
-            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid var(--hairline);
+            border-radius: 14px;
             font-size: 15px;
             line-height: 1.6;
-            color: #333;
+            color: var(--ink);
             resize: none;
-            transition: all 0.3s;
+            transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), transform 0.3s var(--ease-out);
             margin-bottom: 24px;
             font-family: inherit;
-            background: #fcfcfc;
+            background: var(--paper);
         }
 
         .memo-textarea:focus {
             outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 4px rgba(255, 44, 83, 0.1);
+            border-color: rgba(217, 72, 46, 0.45);
+            background: var(--tile);
+            box-shadow: 0 0 0 4px var(--accent-soft);
             transform: translateY(-1px);
         }
 
         .memo-textarea::placeholder {
-            color: #999;
+            color: var(--ink-3);
         }
 
         .memo-buttons {
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
+            gap: 10px;
         }
 
         .memo-button {
-            padding: 10px 24px;
+            padding: 10px 22px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 999px;
+            font-size: 15px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
             position: relative;
             overflow: hidden;
+        }
+
+        .memo-button:active {
+            transform: scale(0.96);
         }
 
         .memo-button::after {
@@ -551,37 +746,41 @@
 
         .save-button {
             background: var(--accent-color);
-            color: white;
+            color: #fff7ef;
             font-weight: 500;
             letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(217, 72, 46, 0.28);
         }
 
         .save-button:hover {
-            background: #ff1745;
-            box-shadow: 0 4px 12px rgba(255, 44, 83, 0.2);
+            background: var(--accent-deep);
+            box-shadow: 0 4px 14px rgba(217, 72, 46, 0.36);
+            transform: translateY(-1px);
         }
 
         .delete-button {
-            background: #f8f8f8;
-            color: #666;
+            background: rgba(38, 34, 28, 0.05);
+            color: var(--ink-2);
         }
 
         .delete-button:hover {
-            background: #ff4757;
-            color: white;
+            background: rgba(217, 72, 46, 0.12);
+            color: var(--accent-deep);
         }
 
         .cancel-button {
-            background: #f8f8f8;
-            color: #666;
+            background: rgba(38, 34, 28, 0.05);
+            color: var(--ink-2);
         }
 
         .cancel-button:hover {
-            background: #eee;
+            background: rgba(38, 34, 28, 0.1);
+            color: var(--ink);
         }
 
         .color-picker {
             display: flex;
+            justify-content: center;
             gap: 12px;
             margin-bottom: 24px;
             padding: 16px 0;
@@ -625,7 +824,7 @@
         }
 
         .color-option.selected {
-            border-color: #333;
+            border-color: var(--ink);
             transform: scale(1.1);
         }
 
@@ -638,7 +837,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #333;
+            background: var(--tile);
         }
 
         /* 莫兰迪色板 */
@@ -650,6 +849,22 @@
         .color-6 { background-color: #d1c2d3; }  /* 淡紫 */
         .color-7 { background-color: #e6d2c0; }  /* 奶茶色 */
         .color-8 { background-color: #d3d4cc; }  /* 浅灰绿 */
+
+        /* 动效降级:系统声明减少动态时,入场/呼吸/弹出全部关掉,只留状态变化 */
+        @media (prefers-reduced-motion: reduce) {
+            .day-card.enter,
+            .selection-chip,
+            .modal-content,
+            .modal-backdrop {
+                animation: none;
+            }
+            .today {
+                animation: none;
+            }
+            * {
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -681,11 +896,13 @@
             </div>
             <h1 id="headerInfo"></h1>
             <div class="header-right">
+                <button id="modeButton" class="mode-button" onclick="app.toggleMode()" title="切换周对齐 / 自适应布局">周对齐</button>
                 <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
                 <select id="langSelect" class="year-select lang-select" title="切换语言" aria-label="切换语言" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
                 <select id="yearSelect" class="year-select"></select>
             </div>
         </header>
+        <div class="week-header" id="weekHeader"></div>
         <div class="calendar-grid" id="calendarContainer"></div>
     </div>
 
@@ -738,6 +955,15 @@
             // 用户没有手动滚动过(默认视图)时,任何窗口变化后都保持今天居中;
             // 用户手动滚走后,resize 一律不再拉回(手机工具栏收起等不打扰浏览)
             const keepDefaultCentered = fromResize && app?.userScrolled === false;
+
+            // 周对齐模式:列数固定 7,由 CSS 类接管,任何窗口宽度都不改列
+            if (app?.mode === 'aligned') {
+                const hadCustom = !!container.style.gridTemplateColumns;
+                container.style.gridTemplateColumns = '';
+                container.style.gridAutoRows = '';
+                if (hadCustom || keepDefaultCentered) app?.scrollToToday?.();
+                return;
+            }
 
             // 手机端交给 CSS 固定5列,不再用 JS 计算
             if (window.innerWidth <= 768) {
@@ -807,7 +1033,10 @@
                         backupImported: '备份导入成功',
                         backupInvalid: '无效的备份文件格式',
                         importFailed: '导入失败：无效的文件格式',
-                        langTitle: '切换语言'
+                        langTitle: '切换语言',
+                        modeAligned: '周对齐',
+                        modeAdaptive: '自适应',
+                        modeToggle: '切换周对齐 / 自适应布局'
                     }
                 },
                 'zh-TW': {
@@ -838,7 +1067,10 @@
                         backupImported: '備份匯入成功',
                         backupInvalid: '無效的備份檔案格式',
                         importFailed: '匯入失敗：無效的檔案格式',
-                        langTitle: '切換語言'
+                        langTitle: '切換語言',
+                        modeAligned: '週對齊',
+                        modeAdaptive: '自適應',
+                        modeToggle: '切換週對齊 / 自適應佈局'
                     }
                 },
                 'en': {
@@ -869,7 +1101,10 @@
                         backupImported: 'Backup imported',
                         backupInvalid: 'Invalid backup file format',
                         importFailed: 'Import failed: invalid file format',
-                        langTitle: 'Change language'
+                        langTitle: 'Change language',
+                        modeAligned: 'Weeks',
+                        modeAdaptive: 'Auto',
+                        modeToggle: 'Toggle week-aligned / seamless layout'
                     }
                 },
                 'es': {
@@ -900,7 +1135,10 @@
                         backupImported: 'Copia de seguridad importada',
                         backupInvalid: 'Formato de copia de seguridad no válido',
                         importFailed: 'Error al importar: formato de archivo no válido',
-                        langTitle: 'Cambiar idioma'
+                        langTitle: 'Cambiar idioma',
+                        modeAligned: 'Semanas',
+                        modeAdaptive: 'Auto',
+                        modeToggle: 'Cambiar entre cuadrícula semanal y continua'
                     }
                 },
                 'pt': {
@@ -931,7 +1169,10 @@
                         backupImported: 'Backup importado com sucesso',
                         backupInvalid: 'Formato de arquivo de backup inválido',
                         importFailed: 'Falha na importação: formato de arquivo inválido',
-                        langTitle: 'Mudar idioma'
+                        langTitle: 'Mudar idioma',
+                        modeAligned: 'Semanas',
+                        modeAdaptive: 'Auto',
+                        modeToggle: 'Alternar entre grade semanal e contínua'
                     }
                 },
                 'fr': {
@@ -962,7 +1203,10 @@
                         backupImported: 'Sauvegarde importée',
                         backupInvalid: 'Format de fichier de sauvegarde invalide',
                         importFailed: "Échec de l'import : format de fichier invalide",
-                        langTitle: 'Changer de langue'
+                        langTitle: 'Changer de langue',
+                        modeAligned: 'Semaines',
+                        modeAdaptive: 'Auto',
+                        modeToggle: 'Basculer entre grille hebdomadaire et continue'
                     }
                 },
                 'de': {
@@ -993,7 +1237,10 @@
                         backupImported: 'Backup erfolgreich importiert',
                         backupInvalid: 'Ungültiges Backup-Dateiformat',
                         importFailed: 'Import fehlgeschlagen: ungültiges Dateiformat',
-                        langTitle: 'Sprache wechseln'
+                        langTitle: 'Sprache wechseln',
+                        modeAligned: 'Wochen',
+                        modeAdaptive: 'Auto',
+                        modeToggle: 'Zwischen Wochenraster und nahtlosem Layout wechseln'
                     }
                 },
                 'ja': {
@@ -1024,7 +1271,10 @@
                         backupImported: 'バックアップを読み込みました',
                         backupInvalid: 'バックアップファイルの形式が無効です',
                         importFailed: '読み込み失敗：無効なファイル形式です',
-                        langTitle: '言語を変更'
+                        langTitle: '言語を変更',
+                        modeAligned: '週整列',
+                        modeAdaptive: 'シームレス',
+                        modeToggle: '週整列 / シームレスを切り替え'
                     }
                 },
                 'ko': {
@@ -1055,7 +1305,10 @@
                         backupImported: '백업을 가져왔습니다',
                         backupInvalid: '잘못된 백업 파일 형식입니다',
                         importFailed: '가져오기 실패: 잘못된 파일 형식입니다',
-                        langTitle: '언어 변경'
+                        langTitle: '언어 변경',
+                        modeAligned: '주 정렬',
+                        modeAdaptive: '자연 흐름',
+                        modeToggle: '주 정렬 / 자연 흐름 전환'
                     }
                 },
                 'ru': {
@@ -1086,7 +1339,10 @@
                         backupImported: 'Резервная копия импортирована',
                         backupInvalid: 'Недопустимый формат файла резервной копии',
                         importFailed: 'Ошибка импорта: недопустимый формат файла',
-                        langTitle: 'Сменить язык'
+                        langTitle: 'Сменить язык',
+                        modeAligned: 'По неделям',
+                        modeAdaptive: 'Поток',
+                        modeToggle: 'Переключить сетку недель / поток'
                     }
                 }
             }
@@ -1126,6 +1382,17 @@
             return names;
         }
 
+        // 星期表头:周一为首列的 7 个本地化短名(CJK 用单字 narrow,与卡片内星期字一致)
+        const weekLabelCache = {};
+        function weekdayLabels(locale) {
+            if (weekLabelCache[locale]) return weekLabelCache[locale];
+            const opt = { weekday: isCJK(locale) ? 'narrow' : 'short' };
+            // 2024-01-01 恰为周一,顺取 7 天即周一至周日
+            const labels = Array.from({ length: 7 }, (_, i) => fmt(locale, opt).format(new Date(2024, 0, 1 + i)));
+            weekLabelCache[locale] = labels;
+            return labels;
+        }
+
         const app = {
             init: function() {
                 this.yearSelect = document.getElementById('yearSelect');
@@ -1157,6 +1424,8 @@
                 document.documentElement.lang = this.locale;
                 this.initLangSelect();
                 this.applyStaticText();
+                // 布局模式:aligned(周对齐) / adaptive(无缝自适应,默认),本地持久化
+                this.mode = localStorage.getItem('calendarMode') === 'aligned' ? 'aligned' : 'adaptive';
 
                 this.initYearSelect();
                 const thisYear = new Date().getFullYear();
@@ -1164,6 +1433,12 @@
                 this.maxYear = thisYear;
                 this.calendarContainer.appendChild(this.renderYearCards(thisYear));
                 this.reindexCards();
+                this.applyLayout();
+                // 首屏卡片错峰浮入,按文档序给一个封顶的延迟;refreshCards 重建的卡片不带 .enter,不重播
+                this.calendarContainer.querySelectorAll('.day-card').forEach((card, i) => {
+                    card.style.setProperty('--i', `${Math.min(i * 3, 420)}ms`);
+                    card.classList.add('enter');
+                });
                 this.bindEvents();
                 this.updateHeaderInfo();
 
@@ -1240,6 +1515,7 @@
                 this.applyStaticText();
                 this.refreshCards();
                 this.updateHeaderInfo();
+                this.applyLayout(); // 表头标签与按钮文案随新语言重建
             },
 
             // data-i18n* 属性声明的静态串统一回填
@@ -1284,17 +1560,85 @@
                 }
             },
 
+            // ---- 布局模式 ----
+            // adaptive(默认) = 无缝连续网格,列数随窗口自适应;aligned = 固定7列周对齐(周一首列,带星期表头)
+            applyLayout: function() {
+                const aligned = this.mode === 'aligned';
+                this.calendarContainer.classList.toggle('mode-aligned', aligned);
+                const head = document.getElementById('weekHeader');
+                head.style.display = aligned ? 'grid' : 'none';
+                // 表头标签跟随语言重建(切语言时 replaceChildren 后走这里)
+                const labels = weekdayLabels(this.locale);
+                head.replaceChildren(...labels.map((label, i) => {
+                    const span = document.createElement('span');
+                    span.textContent = label;
+                    if (i >= 5) span.classList.add('wk-end');
+                    return span;
+                }));
+                const btn = document.getElementById('modeButton');
+                btn.textContent = t(aligned ? 'modeAdaptive' : 'modeAligned');
+                btn.title = t('modeToggle');
+                if (aligned) {
+                    // 清掉自适应时 adjustLayout 留下的 JS 列宽,列数交回 CSS 类
+                    this.calendarContainer.style.gridTemplateColumns = '';
+                    this.calendarContainer.style.gridAutoRows = '';
+                } else {
+                    adjustLayout();
+                }
+            },
+
+            toggleMode: function() {
+                this.mode = this.mode === 'adaptive' ? 'aligned' : 'adaptive';
+                localStorage.setItem('calendarMode', this.mode);
+                const scroller = this.calendarContainer;
+                // 记住视口顶部第一个可见日期,重排后带回原位,浏览位置不迷路
+                const topRect = scroller.getBoundingClientRect();
+                let anchorKey = null;
+                for (const card of scroller.querySelectorAll('.day-card')) {
+                    if (card.getBoundingClientRect().bottom >= topRect.top) {
+                        anchorKey = card.dataset.dateKey;
+                        break;
+                    }
+                }
+                this.applyLayout();
+                if (!this.userScrolled) {
+                    this.scrollToToday();
+                } else if (anchorKey) {
+                    const target = scroller.querySelector(`.day-card[data-date-key="${anchorKey}"]`);
+                    if (target) {
+                        this._programmaticScroll = true;
+                        scroller.scrollTop += target.getBoundingClientRect().top - topRect.top;
+                        requestAnimationFrame(() => { this._programmaticScroll = false; });
+                    }
+                }
+            },
+
             renderYearCards: function(year) {
                 console.log('Generating calendar for year:', year);
                 const frag = document.createDocumentFragment();
                 const today = new Date();
 
+                // 周对齐用空白格:每年自足补齐到 7 的倍数,任意年份前后拼接都不错位。
+                // 自适应模式下 .blank-cell 为 display:none,网格无缝如旧
+                let cells = 0;
+                const blank = () => {
+                    const b = document.createElement('div');
+                    b.className = 'blank-cell';
+                    frag.appendChild(b);
+                    cells++;
+                };
                 for (let month = 0; month < 12; month++) {
+                    // 偏移 = 1 日目标列与当前流位置的差,不是星期几本身(上月尾部已占列)
+                    const targetCol = (new Date(year, month, 1).getDay() + 6) % 7;
+                    const offset = (targetCol - cells % 7 + 7) % 7;
+                    for (let i = 0; i < offset; i++) blank();
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
                         frag.appendChild(this.createDayCard(date, today));
+                        cells++;
                     }
                 }
+                for (let i = cells % 7; i > 0 && i < 7; i++) blank();
                 return frag;
             },
 
