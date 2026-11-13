@@ -25,10 +25,15 @@
             --accent-color: #ff2c53;
         }
 
+        html,
+        body {
+            height: 100%;
+            overflow: hidden; /* 页面整体不滚动,顶部导航永远固定可见 */
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: #fff;
-            min-height: 100vh;
             margin: 0;
             padding: 0;
             display: flex;
@@ -37,14 +42,13 @@
 
         .container {
             flex: 1;
+            min-height: 0;
             display: flex;
             flex-direction: column;
             padding: 0;
             margin: 0;
             width: 100%;
-            height: 100vh;
-            margin-bottom: 40px;
-            overflow-y: auto; /* 添加垂直滚动 */
+            overflow: hidden;
         }
 
         header {
@@ -52,8 +56,8 @@
             padding: 0.5vh;
             background: white;
             z-index: 100;
-            position: sticky;
-            top: 0;
+            position: relative; /* 作为内部绝对定位按钮/年份选择器的锚点 */
+            flex-shrink: 0; /* 固定在顶部,不随滚动消失 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -101,61 +105,47 @@
             font-size: 2em;
             color: #333;
             margin: 0;
-            cursor: pointer;
-            position: relative;
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: background-color 0.2s, all 0.3s;
             line-height: 1.2;
-        }
-
-        h1:hover {
-            background: rgba(0,0,0,0.03);
-            transform: translateY(-1px);
-        }
-
-        h1:hover::after {
-            content: '点击编辑';
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            color: #999;
             white-space: nowrap;
-        }
-
-        .title-input {
-            font: inherit;
-            border: none;
-            padding: 4px 8px;
-            width: 300px;
-            text-align: center;
-            border-radius: 4px;
-            background: #f8f8f8;
-            color: #333;
-            outline: none;
-            margin: 0;
-            line-height: 1.2;
-            transition: all 0.3s;
-        }
-
-        .title-input:focus {
-            background: white;
-            box-shadow: 0 0 0 2px rgba(255, 44, 83, 0.1);
-            transform: translateY(-1px);
         }
 
         .accent {
             color: var(--accent-color);
         }
 
-        .year-select {
+        .header-right {
             position: absolute;
             right: 1vh;
             top: 50%;
             transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .today-button {
+            font-size: 0.9em;
+            padding: 4px 10px;
+            border: 1px solid rgba(255, 44, 83, 0.35);
+            border-radius: 3px;
+            background: white;
+            color: var(--accent-color);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .today-button:hover {
+            background: #fff5f7;
+            border-color: var(--accent-color);
+        }
+
+        .today-button:active {
+            transform: translateY(0);
+        }
+
+        .year-select {
             font-size: 0.9em;
             padding: 4px 24px 4px 12px;
             border: 1px solid rgba(0,0,0,0.1);
@@ -183,6 +173,8 @@
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             gap: 0;
             flex: 1;
+            min-height: 0;
+            overflow-y: auto; /* 只有日历区域滚动,顶部导航不参与滚动 */
             padding: 0;
             margin: 0;
             width: 100%;
@@ -193,8 +185,6 @@
 
         .day-card {
             aspect-ratio: 1;
-            min-width: 80px;
-            min-height: 80px;
             border-right: 1px solid #f0f0f0;
             border-bottom: 1px solid #f0f0f0;
             display: flex;
@@ -204,9 +194,10 @@
             cursor: pointer;
             position: relative;
             background: white;
-            transition: all 0.2s ease;
+            transition: background-color 0.2s ease; /* 只过渡颜色,布局尺寸变化即时生效 */
             font-size: 0.8em;
             padding: 2px;
+            overflow: hidden; /* 格子缩小时裁剪超长文字,不压到相邻格子 */
         }
 
         .date-info {
@@ -218,9 +209,6 @@
         }
 
         @media (min-width: 1200px) {
-            .calendar-grid {
-                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            }
             .date-info {
                 font-size: 11px;
             }
@@ -231,12 +219,22 @@
                 padding: 0.5vh 8px;
             }
             h1 {
-                font-size: 1.3em;
+                font-size: 1.1em;
+            }
+            .header-actions {
+                gap: 8px;
+            }
+            .header-right {
+                right: 8px;
+                gap: 6px;
+            }
+            .today-button {
+                font-size: 0.8em;
+                padding: 3px 8px;
             }
             .year-select {
                 font-size: 0.8em;
                 padding: 3px 20px 3px 8px;
-                right: 8px;
             }
             .calendar-grid {
                 min-width: 0; /* 手机上不再强制560px,避免每周后两天被截断 */
@@ -252,7 +250,15 @@
 
         .lunar-date, .week-day {
             display: inline;
-            color: #888;
+        }
+
+        /* 农历是主信息,星期是重复性辅助信息,分色后「初五 五」不再混成一团 */
+        .lunar-date {
+            color: #555;
+        }
+
+        .week-day {
+            color: #b9b9b9;
         }
 
         .lunar-date::after {
@@ -287,9 +293,16 @@
             color: #333;
         }
 
+        .has-events::before { content: ''; position: absolute; top: 4px; left: 4px; width: 6px; height: 6px; border-radius: 50%; background: #3978c5; }
+        .today.has-events::before { background: white; }
+        .calendar-event-list { max-height: 110px; overflow: auto; margin: 0 0 12px; padding: 0; list-style: none; font-size: 13px; color: #555; }
+        .calendar-event-list li { padding: 5px 8px; margin: 3px 0; background: #f5f7fa; border-left: 3px solid #3978c5; border-radius: 3px; }
+        .calendar-event-list:empty { display: none; }
+        .event-import { display: none; }
+
         .today .day-number,
         .today .date-info {
-            color: white;
+            color: white !important; /* 今天卡红底白字,必须压过周末红 */
         }
 
         .today.has-memo::after {
@@ -299,6 +312,12 @@
 
         .weekend {
             background-color: #f8f8f8;
+        }
+
+        /* 周末数字与星期标红(中华日历惯例),月份紫标保持原色 */
+        .weekend .day-number:not(.month-number),
+        .weekend .week-day {
+            color: var(--accent-color);
         }
 
         .month-number {
@@ -578,10 +597,20 @@
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </button>
+                <button onclick="document.getElementById('icsFile').click()" title="导入本地日历 (.ics)" aria-label="导入本地日历">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </button>
+                <button id="systemCalendarButton" onclick="app.syncSystemCalendar()" title="同步 Mac 日历" aria-label="同步 Mac 日历" style="display:none">
+                    <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0 2 5.3"></path><polyline points="20 4 20 11 13 11"></polyline></svg>
+                </button>
                 <input type="file" id="importFile" style="display: none" accept=".json" onchange="app.importMemos(event)">
+                <input type="file" id="icsFile" class="event-import" accept=".ics,text/calendar" onchange="app.importCalendarEvents(event)">
             </div>
-            <h1 onclick="app.editTitle()"><span id="titleText">THREE<span class="accent">·</span>SIXTY<span class="accent">·</span>FIVE</span></h1>
-            <select id="yearSelect" class="year-select"></select>
+            <h1 id="headerInfo"></h1>
+            <div class="header-right">
+                <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天">今天</button>
+                <select id="yearSelect" class="year-select"></select>
+            </div>
         </header>
         <div class="calendar-grid" id="calendarContainer"></div>
     </div>
@@ -591,6 +620,7 @@
         <div class="modal-backdrop" id="modalBackdrop"></div>
         <div class="modal-content">
             <div class="memo-date" id="memoDate"></div>
+            <ul class="calendar-event-list" id="calendarEventList"></ul>
             <div class="color-picker">
                 <div class="color-option color-1" data-color="#e8d0cd"></div>
                 <div class="color-option color-2" data-color="#d4b8b5"></div>
@@ -611,26 +641,54 @@
     </div>
 
     <script>
+        // 让每一行的高度等于格子宽度,保证格子是正方形
+        // (grid 默认会把卡片拉伸到 auto 行的内容高度,aspect-ratio 不可靠,这里显式指定)
+        function applySquareRows(container) {
+            const firstTrack = parseFloat(getComputedStyle(container).gridTemplateColumns);
+            if (firstTrack > 0) {
+                container.style.gridAutoRows = `${Math.round(firstTrack)}px`;
+            }
+        }
+
         // 将布局调整逻辑抽取为独立函数
-        function adjustLayout() {
+        // fromResize=true 表示由窗口尺寸变化触发
+        function adjustLayout(fromResize) {
             const container = document.querySelector('.calendar-grid');
+
+            // 用户没有手动滚动过(默认视图)时,任何窗口变化后都保持今天居中;
+            // 用户手动滚走后,resize 一律不再拉回(手机工具栏收起等不打扰浏览)
+            const keepDefaultCentered = fromResize && app?.userScrolled === false;
 
             // 手机端交给 CSS 固定5列,不再用 JS 计算
             if (window.innerWidth <= 768) {
+                const hadCustomColumns = !!container.style.gridTemplateColumns;
                 container.style.gridTemplateColumns = '';
+                applySquareRows(container);
+                // 布局切换或默认视图跟随窗口变化,重新让今天居中
+                if (hadCustomColumns || keepDefaultCentered) app?.scrollToToday?.();
                 return;
             }
 
-            const containerWidth = container.offsetWidth;
-            const containerHeight = container.offsetHeight;
-            
-            // 计算理想的格子大小（考虑需要显示365/366天）
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            if (!containerWidth || !containerHeight) return;
+
+            // 按可视区域宽高比算理想列数(格子保持正方形,365/366 天尽量铺满一屏)
             const totalDays = 366; // 使用366以适应闰年
-            const idealColumns = Math.ceil(Math.sqrt(totalDays * containerWidth / containerHeight));
-            const minWidth = Math.floor(containerWidth / idealColumns) - 1; // 减1以处理边框
-            
-            // 更新grid布局
-            container.style.gridTemplateColumns = `repeat(auto-fill, minmax(${minWidth}px, 1fr))`;
+            const idealColumns = Math.round(Math.sqrt(totalDays * containerWidth / containerHeight));
+            // 每格宽度不小于80px:列数超过就减列,改为纵向滚动
+            const maxColumns = Math.max(1, Math.floor((containerWidth - 4) / 80));
+            const columns = Math.max(1, Math.min(idealColumns, maxColumns));
+
+            const columnsChanged = columns !== adjustLayout.lastColumns;
+            adjustLayout.lastColumns = columns;
+
+            // 用精确列数,保证格子宽度与卡片一致,不会互相压盖
+            container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            applySquareRows(container);
+
+            // 列数变化意味着格子尺寸变了,重新让今天居中(用户没滚走时)
+            if (columnsChanged || keepDefaultCentered) app?.scrollToToday?.();
         }
 
         const app = {
@@ -644,15 +702,34 @@
                 this.currentDate = null;
                 this.memos = JSON.parse(localStorage.getItem('memos') || '{}');
                 this.colors = JSON.parse(localStorage.getItem('dayColors') || '{}');
-                this.title = localStorage.getItem('calendarTitle') || 'THREE·SIXTY·FIVE';
-                
+                this.events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
+                // 移除旧版按公历日期展开的导入数据，避免错误日期继续显示。
+                if (localStorage.getItem('calendarEventsVersion') !== '4') {
+                    this.events = {};
+                    localStorage.removeItem('calendarEvents');
+                    localStorage.setItem('calendarEventsVersion', '4');
+                }
+                localStorage.removeItem('calendarTitle'); // 标题栏已改为天数信息,旧的自定义标题不再使用
+                if (window.webkit?.messageHandlers?.calendarSync) {
+                    document.getElementById('systemCalendarButton').style.display = '';
+                }
+
                 this.initYearSelect();
                 this.generateCalendar(new Date().getFullYear());
                 this.bindEvents();
-                this.updateTitleDisplay();
-                
+                this.updateHeaderInfo();
+
+                // 记录用户是否手动滚动过:滚过之后窗口变化不再自动拉回今天
+                this.userScrolled = false;
+                this._programmaticScroll = false;
+                this.calendarContainer.addEventListener('scroll', () => {
+                    if (!this._programmaticScroll) this.userScrolled = true;
+                });
+
                 // 初始化时调用一次布局调整
                 adjustLayout();
+                // 默认定位:让今天出现在页面中间
+                this.scrollToToday();
             },
 
             initYearSelect: function() {
@@ -669,60 +746,33 @@
             },
 
             updateCalendar: function() {
-                const container = document.querySelector('.calendar-grid');
-                container.innerHTML = '';
-                
+                // 与首屏走同一套生成逻辑,保证天数、节假日标记等一致
                 const year = parseInt(document.querySelector('.year-select').value);
-                const totalDays = this.isLeapYear(year) ? 366 : 365;
-                
-                for (let day = 1; day <= totalDays; day++) {
-                    const date = new Date(year, 0, day);
-                    if (date.getFullYear() !== year) break;
-                    
-                    const dayCard = document.createElement('div');
-                    dayCard.className = 'day-card';
-                    
-                    // 检查是否是今天
-                    const today = new Date();
-                    const isToday = date.toDateString() === today.toDateString();
-                    if (isToday) dayCard.classList.add('today');
-                    
-                    // 获取农历和星期
-                    const lunarDay = this.toLunarDate(date);
-                    const weekDay = this.getWeekDay(date);
-                    
-                    // 更新日期显示格式
-                    dayCard.innerHTML = `
-                        <div class="date-info">
-                            <span class="lunar-date">${lunarDay}</span>
-                            <span class="week-day">${weekDay}</span>
-                        </div>
-                    `;
-                    
-                    // 检查是否有备忘录
-                    const dateStr = this.formatDate(date);
-                    if (this.memos[dateStr]) {
-                        dayCard.classList.add('has-memo');
-                    }
-                    
-                    dayCard.addEventListener('click', () => {
-                        this.openMemoModal(date);
-                    });
-                    
-                    container.appendChild(dayCard);
-                }
-                
-                this.updateDayColors();
-                
-                // 更新完日历后调用布局调整
+                this.userScrolled = false; // 换年份视为重新进入默认视图
+                this.generateCalendar(year);
+                this.updateHeaderInfo();
                 adjustLayout();
+                // 切回当年时,同样让今天出现在页面中间
+                this.scrollToToday();
+            },
+
+            // 回到今天:不在今年就切回今年(触发重生成+居中),已在今年就只重新居中
+            goToday: function() {
+                const currentYear = new Date().getFullYear();
+                if (parseInt(this.yearSelect.value, 10) !== currentYear) {
+                    this.yearSelect.value = String(currentYear);
+                    this.updateCalendar();
+                } else {
+                    this.scrollToToday();
+                }
             },
 
             generateCalendar: function(year) {
                 console.log('Generating calendar for year:', year);
+                const scrollTop = this.calendarContainer.scrollTop; // 重建后保持滚动位置
                 this.calendarContainer.innerHTML = '';
                 const today = new Date();
-                
+
                 for (let month = 0; month < 12; month++) {
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
@@ -730,6 +780,23 @@
                         this.calendarContainer.appendChild(dayCard);
                     }
                 }
+                this._programmaticScroll = true;
+                this.calendarContainer.scrollTop = scrollTop;
+                requestAnimationFrame(() => { this._programmaticScroll = false; });
+            },
+
+            scrollToToday: function() {
+                const scroller = this.calendarContainer;
+                const todayCard = scroller.querySelector('.day-card.today');
+                if (!todayCard) return; // 所选年份不含今天时不滚动
+
+                // 把今天的卡片滚动到滚动区域垂直居中的位置
+                const scrollerTop = scroller.getBoundingClientRect().top;
+                const cardTop = todayCard.getBoundingClientRect().top;
+                const offsetInContent = cardTop - scrollerTop + scroller.scrollTop;
+                this._programmaticScroll = true;
+                scroller.scrollTop = Math.max(0, offsetInContent - (scroller.clientHeight - todayCard.offsetHeight) / 2);
+                requestAnimationFrame(() => { this._programmaticScroll = false; });
             },
 
             createDayCard: function(date, today) {
@@ -752,6 +819,7 @@
                 if (hasMemo) {
                     dayCard.classList.add('has-memo');
                 }
+                if (this.events[dateKey]?.length) dayCard.classList.add('has-events');
                 
                 if (date.getDate() === 1) {
                     dayCard.classList.add('month-start');
@@ -792,6 +860,26 @@
 
             getDaysInMonth: function(year, month) {
                 return new Date(year, month + 1, 0).getDate();
+            },
+
+            getDaysInYear: function(year) {
+                // 闰年只取决于 2 月是否 29 天,365/366 由此得出
+                return this.getDaysInMonth(year, 1) === 29 ? 366 : 365;
+            },
+
+            // 标题栏动态信息:当年显示「第 N 天 · 剩 M 天」,其他年份只显示总天数
+            updateHeaderInfo: function() {
+                const year = parseInt(this.yearSelect.value, 10);
+                const total = this.getDaysInYear(year);
+                const now = new Date();
+                const el = document.getElementById('headerInfo');
+                if (year === now.getFullYear()) {
+                    // 当日零点与 1 月 1 日零点之差,ceil 抵消夏令时带来的 ±1 小时偏移
+                    const dayOfYear = Math.ceil((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(year, 0, 1)) / 86400000) + 1;
+                    el.innerHTML = `第 <span class="accent">${dayOfYear}</span> 天 <span class="accent">·</span> 剩 ${total - dayOfYear} 天`;
+                } else {
+                    el.innerHTML = `共 ${total} 天`;
+                }
             },
 
             isToday: function(date, today) {
@@ -850,6 +938,13 @@
                 const month = date.getMonth() + 1;
                 const day = date.getDate();
                 memoDateEl.innerHTML = `${month}月${day}日 ${lunarDay} 星期${weekDay}`;
+                const eventList = document.getElementById('calendarEventList');
+                eventList.replaceChildren();
+                (this.events[dateKey] || []).forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = `${item.time ? item.time + ' ' : ''}${item.title}`;
+                    eventList.appendChild(li);
+                });
                 
                 // 更新备忘录内容
                 const memoContent = this.memos[dateKey] || '';
@@ -884,6 +979,77 @@
                 localStorage.setItem('memos', JSON.stringify(this.memos));
                 this.generateCalendar(this.currentDate.getFullYear());
                 this.closeMemoModal();
+            },
+
+            importCalendarEvents: async function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                try {
+                    const text = (await file.text()).replace(/\r?\n[ \t]/g, '');
+                    const imported = {};
+                    const unescapeText = value => value.replace(/\\[nN]/g, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+                    text.split(/BEGIN:VEVENT/i).slice(1).forEach(block => {
+                        const end = block.search(/END:VEVENT/i);
+                        if (end >= 0) block = block.slice(0, end);
+                        const lines = block.split(/\r?\n/);
+                        const find = name => lines.find(line => new RegExp('^' + name + '(?:;[^:]*)?:', 'i').test(line));
+                        const get = line => line?.slice(line.indexOf(':') + 1) || '';
+                        const start = get(find('DTSTART')).match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2}))?/);
+                        if (!start) return;
+                        const title = unescapeText(get(find('SUMMARY')) || '（无标题）');
+                        const time = start[4] ? `${start[4]}:${start[5]}` : '';
+                        const recurringYearly = /(?:^|;)FREQ=YEARLY(?:;|$)/i.test(get(find('RRULE')));
+                        const firstYear = recurringYearly ? Math.max(+start[1], new Date().getFullYear() - 10) : +start[1];
+                        const lastYear = recurringYearly ? new Date().getFullYear() + 10 : +start[1];
+                        const lunarBirthday = recurringYearly && /岁农历生日/.test(title);
+                        const birthLunar = lunarBirthday ? Lunar.fromDate(new Date(+start[1], +start[2] - 1, +start[3])) : null;
+                        for (let year = firstYear; year <= lastYear; year++) {
+                            let date;
+                            if (lunarBirthday) {
+                                const lunarYear = Lunar.fromDate(new Date(year, 5, 1)).getYear();
+                                date = Lunar.fromYmd(lunarYear, birthLunar.getMonth(), birthLunar.getDay()).getSolar().toDate();
+                            } else {
+                                date = new Date(year, +start[2] - 1, +start[3]);
+                                if (date.getMonth() !== +start[2] - 1 || date.getDate() !== +start[3]) continue;
+                            }
+                            const key = `${year}-${date.getMonth() + 1}-${date.getDate()}`;
+                            (imported[key] ||= []).push({ title, time });
+                        }
+                    });
+                    this.events = imported;
+                    localStorage.setItem('calendarEvents', JSON.stringify(imported));
+                    localStorage.setItem('calendarEventsVersion', '4');
+                    this.generateCalendar(parseInt(this.yearSelect.value, 10));
+                    const count = Object.values(imported).reduce((sum, events) => sum + events.length, 0);
+                    alert(`已导入 ${count} 个日历事件；再次导入会替换当前事件。`);
+                } catch (error) {
+                    alert('导入失败：无法读取此 .ics 文件');
+                } finally { event.target.value = ''; }
+            },
+
+            syncSystemCalendar: function() {
+                window.webkit?.messageHandlers?.calendarSync?.postMessage({ action: 'sync' });
+            },
+
+            receiveSystemCalendarEvents: function(events) {
+                const imported = {};
+                events.forEach(event => {
+                    const key = `${event.year}-${event.month}-${event.day}`;
+                    (imported[key] ||= []).push({
+                        title: event.title,
+                        time: event.time || '',
+                        calendar: event.calendar || ''
+                    });
+                });
+                this.events = imported;
+                localStorage.setItem('calendarEvents', JSON.stringify(imported));
+                localStorage.setItem('calendarEventsVersion', '4');
+                this.generateCalendar(parseInt(this.yearSelect.value, 10));
+                alert(`已从 Mac 日历同步 ${events.length} 个事件。`);
+            },
+
+            receiveSystemCalendarError: function(message) {
+                alert(`无法同步 Mac 日历：${message}`);
             },
 
             closeMemoModal: function() {
@@ -942,49 +1108,11 @@
                         this.closeMemoModal();
                     }
                 });
-            },
 
-            updateTitleDisplay: function() {
-                const titleText = document.getElementById('titleText');
-                titleText.innerHTML = this.title.replace(/·/g, '<span class="accent">·</span>');
-            },
-
-            editTitle: function() {
-                const h1 = document.querySelector('h1');
-                const titleText = document.getElementById('titleText');
-                const currentTitle = this.title;
-                
-                // 创建输入框
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentTitle;
-                input.className = 'title-input';
-                
-                // 获取当前标题的尺寸
-                const { width } = titleText.getBoundingClientRect();
-                input.style.width = `${width}px`;
-                
-                // 替换标题为输入框
-                h1.replaceChild(input, titleText);
-                input.focus();
-                
-                // 处理失焦和回车事件
-                const saveTitle = () => {
-                    const newTitle = input.value.trim() || 'THREE·SIXTY·FIVE';
-                    this.title = newTitle;
-                    localStorage.setItem('calendarTitle', newTitle);
-                    
-                    // 恢复标题显示
-                    const newTitleText = document.createElement('span');
-                    newTitleText.id = 'titleText';
-                    h1.replaceChild(newTitleText, input);
-                    this.updateTitleDisplay();
-                };
-                
-                input.addEventListener('blur', saveTitle);
-                input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        input.blur();
+                // 浮层打开时,按 ESC 关闭(不保存,与「取消」一致)
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.memoModal.style.display === 'block') {
+                        this.closeMemoModal();
                     }
                 });
             },
@@ -992,8 +1120,7 @@
             exportMemos: function() {
                 const data = {
                     memos: JSON.parse(localStorage.getItem('memos') || '{}'),
-                    colors: JSON.parse(localStorage.getItem('dayColors') || '{}'),
-                    title: localStorage.getItem('calendarTitle') || 'THREE·SIXTY·FIVE'
+                    colors: JSON.parse(localStorage.getItem('dayColors') || '{}')
                 };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -1025,13 +1152,7 @@
                                 this.colors = data.colors;
                                 localStorage.setItem('dayColors', JSON.stringify(data.colors));
                             }
-                            // 导入标题
-                            if (data.title) {
-                                this.title = data.title;
-                                localStorage.setItem('calendarTitle', data.title);
-                                this.updateTitleDisplay();
-                            }
-                            
+
                             this.generateCalendar(new Date().getFullYear());
                             alert('备份导入成功');
                         } else {
@@ -1053,7 +1174,7 @@
         });
 
         // 监听窗口大小变化
-        window.addEventListener('resize', adjustLayout);
+        window.addEventListener('resize', () => adjustLayout(true));
 
         // 注册 Service Worker(PWA 离线支持)
         if ('serviceWorker' in navigator) {
