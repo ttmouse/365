@@ -213,6 +213,7 @@
         .year-select:focus-visible,
         .today-button:focus-visible,
         .mode-button:focus-visible,
+        .menu-toggle:focus-visible,
         .header-actions button:focus-visible,
         .selection-chip-clear:focus-visible,
         .memo-button:focus-visible {
@@ -245,6 +246,103 @@
 
         .mode-button:active {
             transform: scale(0.95);
+        }
+
+        /* 右上角折叠菜单:入口只有一个图标按钮,模式/今天/语言/年份收进面板 */
+        .menu-wrap {
+            position: relative;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            color: var(--ink-3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: color 0.25s var(--ease-out), background-color 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+        }
+
+        .menu-toggle:hover,
+        .menu-wrap.open .menu-toggle {
+            color: var(--accent-deep);
+            background: var(--accent-soft);
+        }
+
+        .menu-toggle:active {
+            transform: scale(0.92);
+        }
+
+        .menu-toggle svg {
+            width: 17px;
+            height: 17px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .menu-panel {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 10px);
+            min-width: 172px;
+            background: var(--paper);
+            border: 1px solid var(--hairline);
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(38, 34, 28, 0.16);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out), visibility 0s linear 0.25s;
+        }
+
+        .menu-wrap.open .menu-panel {
+            opacity: 1;
+            visibility: visible;
+            transform: none;
+            transition-delay: 0s;
+        }
+
+        .menu-panel .today-button,
+        .menu-panel .mode-button {
+            width: 100%;
+            text-align: center;
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: var(--hairline);
+            margin: 2px 2px;
+        }
+
+        .menu-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 2px 4px;
+        }
+
+        .menu-label {
+            font-size: 0.8em;
+            color: var(--ink-3);
+            white-space: nowrap;
+        }
+
+        /* 菜单内下拉不再限宽,行内左侧标签 + 右侧下拉占满剩余宽度 */
+        .menu-panel .lang-select {
+            max-width: none;
+            flex: 1;
+            min-width: 0;
         }
 
         /* 布局模式:默认无缝自适应(auto-fill 铺满,1月1日紧接上一年);
@@ -381,14 +479,14 @@
                 position: static;
                 transform: none;
                 gap: 4px;
-                order: 3; /* 与 .header-right 同排 */
-                margin-left: 10px;
+                order: 2; /* 图标组在左,菜单入口贴右 */
             }
             .header-right {
                 position: static;
                 transform: none;
                 gap: 5px;
-                order: 2;
+                order: 3;
+                margin-left: auto; /* 折叠菜单入口推到第二行右端,与桌面同侧 */
             }
             .today-button,
             .mode-button {
@@ -896,10 +994,31 @@
             </div>
             <h1 id="headerInfo"></h1>
             <div class="header-right">
-                <button id="modeButton" class="mode-button" onclick="app.toggleMode()" title="切换周对齐 / 自适应布局">周对齐</button>
-                <button id="todayButton" class="today-button" onclick="app.goToday()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
-                <select id="langSelect" class="year-select lang-select" title="切换语言" aria-label="切换语言" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
-                <select id="yearSelect" class="year-select"></select>
+                <div class="menu-wrap" id="menuWrap">
+                    <button id="menuToggle" class="menu-toggle" onclick="app.toggleMenu()" aria-haspopup="true" aria-expanded="false" title="设置" aria-label="设置" data-i18n-title="settingsTitle" data-i18n-aria="settingsTitle">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="4" y1="7" x2="20" y2="7"></line>
+                            <circle cx="9" cy="7" r="2.2"></circle>
+                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                            <circle cx="15" cy="12" r="2.2"></circle>
+                            <line x1="4" y1="17" x2="20" y2="17"></line>
+                            <circle cx="8" cy="17" r="2.2"></circle>
+                        </svg>
+                    </button>
+                    <div class="menu-panel" id="menuPanel">
+                        <button id="todayButton" class="today-button" onclick="app.goToday(); app.closeMenu()" title="回到今天" data-i18n="today" data-i18n-title="todayTitle">今天</button>
+                        <button id="modeButton" class="mode-button" onclick="app.toggleMode(); app.closeMenu()" title="切换周对齐 / 自适应布局">周对齐</button>
+                        <div class="menu-divider"></div>
+                        <div class="menu-row">
+                            <span class="menu-label" data-i18n="langLabel">语言</span>
+                            <select id="langSelect" class="year-select lang-select" title="切换语言" aria-label="切换语言" data-i18n-title="langTitle" data-i18n-aria="langTitle"></select>
+                        </div>
+                        <div class="menu-row">
+                            <span class="menu-label" data-i18n="yearLabel">年份</span>
+                            <select id="yearSelect" class="year-select"></select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
         <div class="week-header" id="weekHeader"></div>
@@ -1036,7 +1155,10 @@
                         langTitle: '切换语言',
                         modeAligned: '周对齐',
                         modeAdaptive: '自适应',
-                        modeToggle: '切换周对齐 / 自适应布局'
+                        modeToggle: '切换周对齐 / 自适应布局',
+                        settingsTitle: '设置',
+                        langLabel: '语言',
+                        yearLabel: '年份'
                     }
                 },
                 'zh-TW': {
@@ -1070,7 +1192,10 @@
                         langTitle: '切換語言',
                         modeAligned: '週對齊',
                         modeAdaptive: '自適應',
-                        modeToggle: '切換週對齊 / 自適應佈局'
+                        modeToggle: '切換週對齊 / 自適應佈局',
+                        settingsTitle: '設定',
+                        langLabel: '語言',
+                        yearLabel: '年份'
                     }
                 },
                 'en': {
@@ -1104,7 +1229,10 @@
                         langTitle: 'Change language',
                         modeAligned: 'Weeks',
                         modeAdaptive: 'Auto',
-                        modeToggle: 'Toggle week-aligned / seamless layout'
+                        modeToggle: 'Toggle week-aligned / seamless layout',
+                        settingsTitle: 'Settings',
+                        langLabel: 'Language',
+                        yearLabel: 'Year'
                     }
                 },
                 'es': {
@@ -1138,7 +1266,10 @@
                         langTitle: 'Cambiar idioma',
                         modeAligned: 'Semanas',
                         modeAdaptive: 'Auto',
-                        modeToggle: 'Cambiar entre cuadrícula semanal y continua'
+                        modeToggle: 'Cambiar entre cuadrícula semanal y continua',
+                        settingsTitle: 'Ajustes',
+                        langLabel: 'Idioma',
+                        yearLabel: 'Año'
                     }
                 },
                 'pt': {
@@ -1172,7 +1303,10 @@
                         langTitle: 'Mudar idioma',
                         modeAligned: 'Semanas',
                         modeAdaptive: 'Auto',
-                        modeToggle: 'Alternar entre grade semanal e contínua'
+                        modeToggle: 'Alternar entre grade semanal e contínua',
+                        settingsTitle: 'Configurações',
+                        langLabel: 'Idioma',
+                        yearLabel: 'Ano'
                     }
                 },
                 'fr': {
@@ -1206,7 +1340,10 @@
                         langTitle: 'Changer de langue',
                         modeAligned: 'Semaines',
                         modeAdaptive: 'Auto',
-                        modeToggle: 'Basculer entre grille hebdomadaire et continue'
+                        modeToggle: 'Basculer entre grille hebdomadaire et continue',
+                        settingsTitle: 'Réglages',
+                        langLabel: 'Langue',
+                        yearLabel: 'Année'
                     }
                 },
                 'de': {
@@ -1240,7 +1377,10 @@
                         langTitle: 'Sprache wechseln',
                         modeAligned: 'Wochen',
                         modeAdaptive: 'Auto',
-                        modeToggle: 'Zwischen Wochenraster und nahtlosem Layout wechseln'
+                        modeToggle: 'Zwischen Wochenraster und nahtlosem Layout wechseln',
+                        settingsTitle: 'Einstellungen',
+                        langLabel: 'Sprache',
+                        yearLabel: 'Jahr'
                     }
                 },
                 'ja': {
@@ -1274,7 +1414,10 @@
                         langTitle: '言語を変更',
                         modeAligned: '週整列',
                         modeAdaptive: 'シームレス',
-                        modeToggle: '週整列 / シームレスを切り替え'
+                        modeToggle: '週整列 / シームレスを切り替え',
+                        settingsTitle: '設定',
+                        langLabel: '言語',
+                        yearLabel: '年'
                     }
                 },
                 'ko': {
@@ -1308,7 +1451,10 @@
                         langTitle: '언어 변경',
                         modeAligned: '주 정렬',
                         modeAdaptive: '자연 흐름',
-                        modeToggle: '주 정렬 / 자연 흐름 전환'
+                        modeToggle: '주 정렬 / 자연 흐름 전환',
+                        settingsTitle: '설정',
+                        langLabel: '언어',
+                        yearLabel: '연도'
                     }
                 },
                 'ru': {
@@ -1342,7 +1488,10 @@
                         langTitle: 'Сменить язык',
                         modeAligned: 'По неделям',
                         modeAdaptive: 'Поток',
-                        modeToggle: 'Переключить сетку недель / поток'
+                        modeToggle: 'Переключить сетку недель / поток',
+                        settingsTitle: 'Настройки',
+                        langLabel: 'Язык',
+                        yearLabel: 'Год'
                     }
                 }
             }
@@ -1397,6 +1546,9 @@
             init: function() {
                 this.yearSelect = document.getElementById('yearSelect');
                 this.calendarContainer = document.getElementById('calendarContainer');
+                this.menuWrap = document.getElementById('menuWrap');
+                this.menuToggle = document.getElementById('menuToggle');
+                this.menuOpen = false;
                 this.modalBackdrop = document.getElementById('modalBackdrop');
                 this.memoModal = document.getElementById('memoModal');
                 this.memoText = document.getElementById('memoText');
@@ -1431,6 +1583,7 @@
                 const thisYear = new Date().getFullYear();
                 this.minYear = thisYear;
                 this.maxYear = thisYear;
+                this.calendarContainer.appendChild(this.renderLeadingBlanks(thisYear));
                 this.calendarContainer.appendChild(this.renderYearCards(thisYear));
                 this.reindexCards();
                 this.applyLayout();
@@ -1483,7 +1636,10 @@
                     this.langSelect.appendChild(option);
                 }
                 this.langSelect.value = this.locale;
-                this.langSelect.addEventListener('change', (e) => this.applyLanguage(e.target.value));
+                this.langSelect.addEventListener('change', (e) => {
+                    this.applyLanguage(e.target.value);
+                    this.closeMenu();
+                });
             },
 
             // 显式保存的选择优先;否则按浏览器语言逐个匹配,港澳台繁中归 zh-TW,其余中文归 zh-CN
@@ -1535,7 +1691,7 @@
                 this.userScrolled = false; // 换年份视为重新进入默认视图
                 this.minYear = year;
                 this.maxYear = year;
-                this.calendarContainer.replaceChildren(this.renderYearCards(year));
+                this.calendarContainer.replaceChildren(this.renderLeadingBlanks(year), this.renderYearCards(year));
                 this.cancelDrag();
                 this.resetSelection(); // 重建后旧索引失效,框选区间一并清空
                 this.reindexCards();
@@ -1613,32 +1769,50 @@
                 }
             },
 
+            // 右上角折叠菜单:开合状态只有 menuOpen 一个布尔,open class 与 aria-expanded 都是它的投影;
+            // 面板里四个动作(今天/模式/语言/年份)生效后都收起菜单
+            toggleMenu: function() {
+                this.menuOpen ? this.closeMenu() : this.openMenu();
+            },
+
+            openMenu: function() {
+                this.menuOpen = true;
+                this.menuWrap.classList.add('open');
+                this.menuToggle.setAttribute('aria-expanded', 'true');
+            },
+
+            closeMenu: function() {
+                if (!this.menuOpen) return;
+                this.menuOpen = false;
+                this.menuWrap.classList.remove('open');
+                this.menuToggle.setAttribute('aria-expanded', 'false');
+            },
+
             renderYearCards: function(year) {
                 console.log('Generating calendar for year:', year);
                 const frag = document.createDocumentFragment();
                 const today = new Date();
 
-                // 周对齐用空白格:每年自足补齐到 7 的倍数,任意年份前后拼接都不错位。
-                // 自适应模式下 .blank-cell 为 display:none,网格无缝如旧
-                let cells = 0;
-                const blank = () => {
-                    const b = document.createElement('div');
-                    b.className = 'blank-cell';
-                    frag.appendChild(b);
-                    cells++;
-                };
                 for (let month = 0; month < 12; month++) {
-                    // 偏移 = 1 日目标列与当前流位置的差,不是星期几本身(上月尾部已占列)
-                    const targetCol = (new Date(year, month, 1).getDay() + 6) % 7;
-                    const offset = (targetCol - cells % 7 + 7) % 7;
-                    for (let i = 0; i < offset; i++) blank();
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
                         frag.appendChild(this.createDayCard(date, today));
-                        cells++;
                     }
                 }
-                for (let i = cells % 7; i > 0 && i < 7; i++) blank();
+                return frag;
+            },
+
+            // 周对齐唯一需要的空白:整个流最开头把 1 月 1 日推到真实星期列。
+            // 之后日期连续推进,列自动等于星期列,任何跨年处零空白无缝衔接。
+            // 自适应模式下 .blank-cell 为 display:none,1 月 1 日仍从首格开始
+            renderLeadingBlanks: function(year) {
+                const frag = document.createDocumentFragment();
+                const offset = (new Date(year, 0, 1).getDay() + 6) % 7;
+                for (let i = 0; i < offset; i++) {
+                    const b = document.createElement('div');
+                    b.className = 'blank-cell';
+                    frag.appendChild(b);
+                }
                 return frag;
             },
 
@@ -1658,7 +1832,11 @@
                 const scroller = this.calendarContainer;
                 this.clearSelection(); // 前插使所有索引整体后移,旧选区先按旧索引清掉
                 const before = scroller.scrollHeight;
-                scroller.prepend(this.renderYearCards(year));
+                // 旧流首端的对齐空白让位:新年份自带首端空白,其 12 月 31 日与旧年 1 月 1 日无缝相邻
+                while (scroller.firstElementChild?.classList.contains('blank-cell')) {
+                    scroller.firstElementChild.remove();
+                }
+                scroller.prepend(this.renderLeadingBlanks(year), this.renderYearCards(year));
                 this.minYear = year;
                 this.reindexCards();
                 // 前插使上方多出一整年,补回等量 scrollTop,视口里的内容保持不动
@@ -1670,6 +1848,7 @@
             // 数据(memos/colors/events)变化后重建整段区间的卡片;容器与滚动位置都不动
             refreshCards: function() {
                 const frag = document.createDocumentFragment();
+                frag.appendChild(this.renderLeadingBlanks(this.minYear));
                 for (let year = this.minYear; year <= this.maxYear; year++) {
                     frag.appendChild(this.renderYearCards(year));
                 }
@@ -2025,6 +2204,12 @@
                 // 年份选择事件
                 this.yearSelect.addEventListener('change', (e) => {
                     this.updateCalendar();
+                    this.closeMenu();
+                });
+
+                // 点菜单外任何位置都收起(日历格点击/拖选同样触发)
+                document.addEventListener('click', (e) => {
+                    if (this.menuOpen && !this.menuWrap.contains(e.target)) this.closeMenu();
                 });
 
                 // 颜色选择事件
@@ -2062,6 +2247,10 @@
                             e.preventDefault();
                             this.saveMemo();
                         }
+                        return;
+                    }
+                    if (e.key === 'Escape' && this.menuOpen) {
+                        this.closeMenu();
                         return;
                     }
                     if (e.key === 'Escape' && this.selection) this.clearSelection();
