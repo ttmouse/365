@@ -169,18 +169,23 @@
         }
 
         .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 0;
             flex: 1;
             min-height: 0;
             overflow-y: auto; /* 只有日历区域滚动,顶部导航不参与滚动 */
+            overflow-anchor: none; /* 前插上一年后由 JS 精确补 scrollTop,浏览器的滚动锚定不能再补一次 */
             padding: 0;
             margin: 0;
             width: 100%;
             min-width: 560px; /* 确保最小宽度能容纳7个80px的卡片 */
             border-top: 1px solid #f0f0f0;
             border-left: 1px solid #f0f0f0;
+        }
+
+        /* 每年一个 block,网格下放到 block 上,多个 block 纵向堆成连续年历 */
+        .year-block {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 0;
         }
 
         .day-card {
@@ -238,6 +243,8 @@
             }
             .calendar-grid {
                 min-width: 0; /* 手机上不再强制560px,避免每周后两天被截断 */
+            }
+            .year-block {
                 grid-template-columns: repeat(5, 1fr);
             }
             .day-card {
@@ -660,9 +667,12 @@
 
             // 手机端交给 CSS 固定5列,不再用 JS 计算
             if (window.innerWidth <= 768) {
-                const hadCustomColumns = !!container.style.gridTemplateColumns;
-                container.style.gridTemplateColumns = '';
-                applySquareRows(container);
+                const blocks = container.querySelectorAll('.year-block');
+                const hadCustomColumns = [...blocks].some(block => block.style.gridTemplateColumns);
+                blocks.forEach(block => {
+                    block.style.gridTemplateColumns = '';
+                    applySquareRows(block);
+                });
                 // 布局切换或默认视图跟随窗口变化,重新让今天居中
                 if (hadCustomColumns || keepDefaultCentered) app?.scrollToToday?.();
                 return;
@@ -683,8 +693,10 @@
             adjustLayout.lastColumns = columns;
 
             // 用精确列数,保证格子宽度与卡片一致,不会互相压盖
-            container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
-            applySquareRows(container);
+            container.querySelectorAll('.year-block').forEach(block => {
+                block.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+                applySquareRows(block);
+            });
 
             // 列数变化意味着格子尺寸变了,重新让今天居中(用户没滚走时)
             if (columnsChanged || keepDefaultCentered) app?.scrollToToday?.();
@@ -714,7 +726,10 @@
                 }
 
                 this.initYearSelect();
-                this.generateCalendar(new Date().getFullYear());
+                const thisYear = new Date().getFullYear();
+                this.minYear = thisYear;
+                this.maxYear = thisYear;
+                this.calendarContainer.appendChild(this.renderYearBlock(thisYear));
                 this.bindEvents();
                 this.updateHeaderInfo();
 
@@ -723,6 +738,11 @@
                 this._programmaticScroll = false;
                 this.calendarContainer.addEventListener('scroll', () => {
                     if (!this._programmaticScroll) this.userScrolled = true;
+                    if (this._scrollRaf) return;
+                    this._scrollRaf = requestAnimationFrame(() => {
+                        this._scrollRaf = null;
+                        this.updateOnScroll();
+                    });
                 });
 
                 // 初始化时调用一次布局调整
@@ -748,11 +768,17 @@
                 // 与首屏走同一套生成逻辑,保证天数、节假日标记等一致
                 const year = parseInt(document.querySelector('.year-select').value);
                 this.userScrolled = false; // 换年份视为重新进入默认视图
-                this.generateCalendar(year);
+                this.minYear = year;
+                this.maxYear = year;
+                this.calendarContainer.replaceChildren(this.renderYearBlock(year));
                 this.updateHeaderInfo();
                 adjustLayout();
-                // 切回当年时,同样让今天出现在页面中间
-                this.scrollToToday();
+                // 当年回到今天;其他年份定位到 1 月
+                if (year === new Date().getFullYear()) {
+                    this.scrollToToday();
+                } else {
+                    this.scrollToYearStart(year);
+                }
             },
 
             // 回到今天:不在今年就切回今年(触发重生成+居中),已在今年就只重新居中
@@ -766,22 +792,98 @@
                 }
             },
 
-            generateCalendar: function(year) {
+            renderYearBlock: function(year) {
                 console.log('Generating calendar for year:', year);
-                const scrollTop = this.calendarContainer.scrollTop; // 重建后保持滚动位置
-                this.calendarContainer.innerHTML = '';
+                const block = document.createElement('div');
+                block.className = 'year-block';
+                block.dataset.year = year;
                 const today = new Date();
 
                 for (let month = 0; month < 12; month++) {
                     for (let day = 1; day <= this.getDaysInMonth(year, month); day++) {
                         const date = new Date(year, month, day);
-                        const dayCard = this.createDayCard(date, today);
-                        this.calendarContainer.appendChild(dayCard);
+                        block.appendChild(this.createDayCard(date, today));
                     }
                 }
+                return block;
+            },
+
+            // 新 block 沿用当前列数(手机端交给 CSS 固定5列),行高按自身列宽重算
+            styleYearBlock: function(block) {
+                block.style.gridTemplateColumns = window.innerWidth <= 768 || !adjustLayout.lastColumns
+                    ? ''
+                    : `repeat(${adjustLayout.lastColumns}, 1fr)`;
+                applySquareRows(block);
+            },
+
+            appendYear: function(year) {
+                const block = this.renderYearBlock(year);
+                this.calendarContainer.appendChild(block);
+                this.styleYearBlock(block);
+                this.maxYear = year;
+            },
+
+            prependYear: function(year) {
+                const scroller = this.calendarContainer;
+                const block = this.renderYearBlock(year);
+                scroller.prepend(block);
+                this.styleYearBlock(block);
+                this.minYear = year;
+                // 前插使上方多出一整年,补回等量 scrollTop,视口里的内容保持不动
                 this._programmaticScroll = true;
-                this.calendarContainer.scrollTop = scrollTop;
+                scroller.scrollTop += block.offsetHeight;
                 requestAnimationFrame(() => { this._programmaticScroll = false; });
+            },
+
+            // 数据(memos/colors/events)变化后原地重建每个 block 的卡片;block 元素与滚动位置都不动
+            refreshYearBlocks: function() {
+                for (const block of this.calendarContainer.children) {
+                    block.replaceChildren(...this.renderYearBlock(+block.dataset.year).children);
+                }
+            },
+
+            // 滚动帧处理:区间头尾不足一屏就扩展(±10 年封顶),再同步 header 年份
+            updateOnScroll: function() {
+                const scroller = this.calendarContainer;
+                const now = new Date().getFullYear();
+                // 视口可能比一整年还高,一次帧内循环扩到离开区间边缘为止
+                for (;;) {
+                    const nearBottom = scroller.scrollTop + 2 * scroller.clientHeight > scroller.scrollHeight;
+                    const nearTop = scroller.scrollTop < scroller.clientHeight;
+                    if (nearBottom && this.maxYear < now + 10) {
+                        this.appendYear(this.maxYear + 1);
+                    } else if (nearTop && this.minYear > now - 10) {
+                        this.prependYear(this.minYear - 1);
+                    } else {
+                        break;
+                    }
+                }
+                this.syncHeaderYear();
+            },
+
+            // header 年份由「覆盖视口中心的 block」推导;程序赋值不触发 change,也不产生滚动
+            syncHeaderYear: function() {
+                const scroller = this.calendarContainer;
+                const box = scroller.getBoundingClientRect();
+                const centerY = box.top + box.height / 2;
+                let year = null;
+                for (const block of scroller.children) {
+                    const rect = block.getBoundingClientRect();
+                    if (rect.top <= centerY && centerY < rect.bottom) {
+                        year = +block.dataset.year;
+                        break;
+                    }
+                }
+                if (year === null) {
+                    // 内容不足一屏时中心会落在最后一个 block 之后
+                    const last = scroller.lastElementChild;
+                    if (!last) return;
+                    year = +last.dataset.year;
+                }
+                if (year !== parseInt(this.yearSelect.value, 10)) {
+                    this.yearSelect.value = String(year);
+                    this.updateHeaderInfo();
+                }
             },
 
             scrollToToday: function() {
@@ -795,6 +897,19 @@
                 const offsetInContent = cardTop - scrollerTop + scroller.scrollTop;
                 this._programmaticScroll = true;
                 scroller.scrollTop = Math.max(0, offsetInContent - (scroller.clientHeight - todayCard.offsetHeight) / 2);
+                requestAnimationFrame(() => { this._programmaticScroll = false; });
+            },
+
+            // 非当年定位:把该年 1 月 1 日的卡片滚到视口中部(与 scrollToToday 同一居中思路)
+            scrollToYearStart: function(year) {
+                const scroller = this.calendarContainer;
+                const firstCard = scroller.querySelector(`.year-block[data-year="${year}"] .day-card`);
+                if (!firstCard) return;
+                const scrollerTop = scroller.getBoundingClientRect().top;
+                const cardTop = firstCard.getBoundingClientRect().top;
+                const offsetInContent = cardTop - scrollerTop + scroller.scrollTop;
+                this._programmaticScroll = true;
+                scroller.scrollTop = Math.max(0, offsetInContent - (scroller.clientHeight - firstCard.offsetHeight) / 2);
                 requestAnimationFrame(() => { this._programmaticScroll = false; });
             },
 
@@ -976,7 +1091,7 @@
                 }
                 
                 localStorage.setItem('memos', JSON.stringify(this.memos));
-                this.generateCalendar(this.currentDate.getFullYear());
+                this.refreshYearBlocks();
                 this.closeMemoModal();
             },
 
@@ -1018,7 +1133,7 @@
                     this.events = imported;
                     localStorage.setItem('calendarEvents', JSON.stringify(imported));
                     localStorage.setItem('calendarEventsVersion', '4');
-                    this.generateCalendar(parseInt(this.yearSelect.value, 10));
+                    this.refreshYearBlocks();
                     const count = Object.values(imported).reduce((sum, events) => sum + events.length, 0);
                     alert(`已导入 ${count} 个日历事件；再次导入会替换当前事件。`);
                 } catch (error) {
@@ -1043,7 +1158,7 @@
                 this.events = imported;
                 localStorage.setItem('calendarEvents', JSON.stringify(imported));
                 localStorage.setItem('calendarEventsVersion', '4');
-                this.generateCalendar(parseInt(this.yearSelect.value, 10));
+                this.refreshYearBlocks();
                 alert(`已从 Mac 日历同步 ${events.length} 个事件。`);
             },
 
@@ -1068,7 +1183,7 @@
                 }
                 
                 localStorage.setItem('dayColors', JSON.stringify(this.colors));
-                this.generateCalendar(this.currentDate.getFullYear());
+                this.refreshYearBlocks();
                 
                 // 更新颜色选择器UI
                 const colorOptions = document.querySelectorAll('.color-option');
@@ -1156,7 +1271,7 @@
                                 localStorage.setItem('dayColors', JSON.stringify(data.colors));
                             }
 
-                            this.generateCalendar(new Date().getFullYear());
+                            this.refreshYearBlocks();
                             alert('备份导入成功');
                         } else {
                             alert('无效的备份文件格式');
@@ -1177,7 +1292,10 @@
         });
 
         // 监听窗口大小变化
-        window.addEventListener('resize', () => adjustLayout(true));
+        window.addEventListener('resize', () => {
+            adjustLayout(true);
+            app?.syncHeaderYear?.(); // 行高变化可能移动视口中心所在的年份
+        });
 
         // 注册 Service Worker(PWA 离线支持)
         if ('serviceWorker' in navigator) {

@@ -1,6 +1,6 @@
 // 365 年历 Service Worker
 // 策略:页面导航先网后缓存(改版立即生效,离线兜底);其余同源资源缓存优先
-const CACHE = '365-v5';
+const CACHE = '365-v6';
 const PRECACHE = [
     './',
     './index.html',
